@@ -1,0 +1,3 @@
+<src>: include
+
+<src/vdm2why.{ml,byte,native}>: pkg_str
