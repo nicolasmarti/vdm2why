@@ -1,9 +1,3 @@
-S = bool
-S = <Coucou>
-T = set of <Coucou>
-T = seq1 doudou
-T = inmap (set of <Coucou>) to <Doudou>
-T = nat1 * nat * int * <Doudou>
-T = caca :: yop1 : doudou
-    	    prout
-	    yop2 : truc
+Plant = Plant :: plan   : Plan
+                 alarms : set of Alarm
+inv mk_Plant(plan,alarms) == QualificationOK(plan(per),a.quali)

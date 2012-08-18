@@ -13,6 +13,8 @@ type vdmtype = TyBool
 	       | TyVar of int
 	       | TyName of string * pos
 
+	       | TyToken
+
 	       | TySet of vdmtype
 	       | TySeq of vdmtype
 	       | TySeq1 of vdmtype
@@ -20,10 +22,12 @@ type vdmtype = TyBool
 	       | TyInjMap of vdmtype * vdmtype
 	       | TyProd of vdmtype list
 	       | TyComp of name * ((name * bool) option * vdmtype) list
-
+	       | TyOption of vdmtype
+	       | TyUnion of vdmtype list
+	       | TyFct of vdmtype list * bool * vdmtype
 
 type vdmterm_ast = TeBool of bool
-		   | Bottom
+		   | TeBottom
 		   | Not of vdmterm
 		   | And of vdmterm * vdmterm
 		   | Or of vdmterm * vdmterm
@@ -62,7 +66,12 @@ type vdmterm_ast = TeBool of bool
 		   | TeQuote of string
 		       
 		   | TeName of string
-		   | TeApp of vdmterm * vdmterm list
+		   | TeApp of name * vdmterm list
+
+		   | TeToken of vdmterm
+
+		   | TeFieldAccess of vdmterm * name
+
 and vdmterm = {
   ast: vdmterm_ast;
   type_: vdmtype option;
@@ -72,5 +81,4 @@ and vdmterm = {
 let build_term ?(pos: pos = nopos) (a: vdmterm_ast) : vdmterm =
   { ast = a; type_ = None; pos = pos }
 
-type vdmtypedecl = TypeDecl of name * vdmtype * pos
-		   | InvDecl of vdmterm * vdmterm * pos
+type vdmtypedecl = TypeDecl of name * vdmtype * pos * (vdmterm * vdmterm * pos) option
