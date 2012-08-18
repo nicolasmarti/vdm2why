@@ -234,12 +234,20 @@ and parse_basic_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmter
     let () = whitespaces pb in
     TeQuote q
   )
-  (* name *)
+  (* name, function call *)
   <|> tryrule (fun pb ->
     let () = whitespaces pb in
     let q = after_start_pos leftmost parse_name pb in
+    let args = mayberule (fun pb ->
+      let () = after_start_pos leftmost (word "(") pb in
+      let args = separatedBy (parse_term ~leftmost:leftmost) (word ",") pb in
+      let () = after_start_pos leftmost (error (word ")") "missing closing parenthesis")pb in
+      args
+    ) pb in
     let () = whitespaces pb in
-    TeName q
+    match args with
+      | None -> TeName q
+      | Some l -> TeApp(TeName q, l)
   )
   <|> tryrule (fun pb ->
     let () = whitespaces pb in

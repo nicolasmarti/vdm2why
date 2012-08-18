@@ -49,6 +49,7 @@ type vdmterm = TeBool of bool
 	       | TeQuote of string
 
 	       | TeName of string
+	       | TeApp of vdmterm * vdmterm list
 
 type vdmtypedecl = TypeDecl of name * vdmtype
 		   | InvDecl of vdmterm * vdmterm
