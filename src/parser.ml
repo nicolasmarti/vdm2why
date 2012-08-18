@@ -67,30 +67,30 @@ let prefixes : (string, (priority * (pos -> vdmterm -> vdmterm))) Hashtbl.t = Ha
 let infixes : (string, (priority * associativity * (pos -> vdmterm -> vdmterm -> vdmterm))) Hashtbl.t = Hashtbl.create 100
 let postfixes : (string, (priority * (pos -> vdmterm -> vdmterm))) Hashtbl.t = Hashtbl.create 100;;
 
-Hashtbl.add prefixes "not" (100, fun _ x -> Not x);;
-Hashtbl.add prefixes "-" (300, fun _ x -> Minus x);;
+Hashtbl.add prefixes "not" (100, fun pos x -> build_term ~pos:pos (Not x));;
+Hashtbl.add prefixes "-" (300, fun pos x -> build_term ~pos:pos (Minus x));;
 
-Hashtbl.add infixes "and" (90, RightAssoc, fun _ x y -> And (x, y));;
-Hashtbl.add infixes "or" (80, RightAssoc, fun _ x y -> Or (x, y));;
-Hashtbl.add infixes "=>" (70, RightAssoc, fun _ x y -> Impl (x, y));;
-Hashtbl.add infixes "<=>" (70, RightAssoc, fun _ x y -> Iff (x, y));;
+Hashtbl.add infixes "and" (90, RightAssoc, fun pos x y -> build_term ~pos:pos (And (x, y)));;
+Hashtbl.add infixes "or" (80, RightAssoc, fun pos x y -> build_term ~pos:pos (Or (x, y)));;
+Hashtbl.add infixes "=>" (70, RightAssoc, fun pos x y -> build_term ~pos:pos (Impl (x, y)));;
+Hashtbl.add infixes "<=>" (70, RightAssoc, fun pos x y -> build_term ~pos:pos (Iff (x, y)));;
 
-Hashtbl.add infixes "-" (300, RightAssoc, fun _ x y -> Sub (x, y));;
-Hashtbl.add infixes "+" (300, RightAssoc, fun _ x y -> Add (x, y));;
-Hashtbl.add infixes "*" (310, RightAssoc, fun _ x y -> Mult (x, y));;
-Hashtbl.add infixes "/" (310, RightAssoc, fun _ x y -> Divide (x, y));;
-Hashtbl.add infixes "div" (310, RightAssoc, fun _ x y -> Div (x, y));;
-Hashtbl.add infixes "rem" (310, RightAssoc, fun _ x y -> Rem (x, y));;
-Hashtbl.add infixes "mod" (310, RightAssoc, fun _ x y -> Rem (x, y));;
-Hashtbl.add infixes "**" (320, RightAssoc, fun _ x y -> Power (x, y));;
+Hashtbl.add infixes "-" (300, RightAssoc, fun pos x y -> build_term ~pos:pos (Sub (x, y)));;
+Hashtbl.add infixes "+" (300, RightAssoc, fun pos x y -> build_term ~pos:pos (Add (x, y)));;
+Hashtbl.add infixes "*" (310, RightAssoc, fun pos x y -> build_term ~pos:pos (Mult (x, y)));;
+Hashtbl.add infixes "/" (310, RightAssoc, fun pos x y -> build_term ~pos:pos (Divide (x, y)));;
+Hashtbl.add infixes "div" (310, RightAssoc, fun pos x y -> build_term ~pos:pos (Div (x, y)));;
+Hashtbl.add infixes "rem" (310, RightAssoc, fun pos x y -> build_term ~pos:pos (Rem (x, y)));;
+Hashtbl.add infixes "mod" (310, RightAssoc, fun pos x y -> build_term ~pos:pos (Rem (x, y)));;
+Hashtbl.add infixes "**" (320, RightAssoc, fun pos x y -> build_term ~pos:pos (Power (x, y)));;
 
-Hashtbl.add infixes ">=" (200, RightAssoc, fun _ x y -> GE (x, y));;
-Hashtbl.add infixes "<=" (200, RightAssoc, fun _ x y -> LE (x, y));;
-Hashtbl.add infixes "<" (200, RightAssoc, fun _ x y -> LT (x, y));;
-Hashtbl.add infixes ">" (200, RightAssoc, fun _ x y -> GT (x, y));;
+Hashtbl.add infixes ">=" (200, RightAssoc, fun pos x y -> build_term ~pos:pos (GE (x, y)));;
+Hashtbl.add infixes "<=" (200, RightAssoc, fun pos x y -> build_term ~pos:pos (LE (x, y)));;
+Hashtbl.add infixes "<" (200, RightAssoc, fun pos x y -> build_term ~pos:pos (LT (x, y)));;
+Hashtbl.add infixes ">" (200, RightAssoc, fun pos x y -> build_term ~pos:pos (GT (x, y)));;
 
-Hashtbl.add infixes "=" (200, NoAssoc, fun _ x y -> Eq (x, y));;
-Hashtbl.add infixes "<>" (200, NoAssoc, fun _ x y -> Eq (x, y));;
+Hashtbl.add infixes "=" (200, NoAssoc, fun pos x y -> build_term ~pos:pos (Eq (x, y)));;
+Hashtbl.add infixes "<>" (200, NoAssoc, fun pos x y -> build_term ~pos:pos (Neq (x, y)));;
 
 
 
@@ -164,9 +164,9 @@ and parse_basic_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmter
   (* true, false *)
   tryrule (fun pb ->
     let () = whitespaces pb in
-    let () = after_start_pos leftmost (word "true") pb in
+    let (), pos = with_pos (after_start_pos leftmost (word "true")) pb in
     let () = whitespaces pb in
-    TeBool true
+    build_term ~pos:pos (TeBool true)
   )
   <|> tryrule (fun pb ->
     let () = whitespaces pb in
