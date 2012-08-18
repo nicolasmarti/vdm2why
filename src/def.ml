@@ -11,7 +11,16 @@ type vdmtype = TyBool
 	       | TyQuote of string
 
 	       | TyVar of int
-	       | TyName of int
+	       | TyName of string * pos
+
+	       | TySet of vdmtype
+	       | TySeq of vdmtype
+	       | TySeq1 of vdmtype
+	       | TyMap of vdmtype * vdmtype
+	       | TyInjMap of vdmtype * vdmtype
+	       | TyProd of vdmtype list
+	       | TyComp of name * ((name * bool) option * vdmtype) list
+
 
 type vdmterm_ast = TeBool of bool
 		   | Bottom

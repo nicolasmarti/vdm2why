@@ -1,3 +1,9 @@
 S = bool
-S2 = <Coucou>
-inv x == prout(caca, pipi, 654)
+S = <Coucou>
+T = set of <Coucou>
+T = seq1 doudou
+T = inmap (set of <Coucou>) to <Doudou>
+T = nat1 * nat * int * <Doudou>
+T = caca :: yop1 : doudou
+    	    prout
+	    yop2 : truc

@@ -1,5 +1,8 @@
-open Parser
 open Libparser
+open Libpprinter
+
+open Parser
+open Printer
 
 open Printf
 
@@ -13,9 +16,14 @@ let main () =
   in
   let pb = build_parserbuffer stream in
   try 
-    let _ = (many parse_type_decl) pb in
+    let decls = (many parse_type_decl) pb in
     let _ = whitespaces pb in
     let _ = eos pb in
+    let _ = List.map (fun decl ->
+      let token = vdmtypedecl2token decl in
+      let box = token2box token 200 2 in
+      printf "%s\n" (box2string box)
+    ) decls in
     ()
   with
     | NoMatch -> 
