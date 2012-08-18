@@ -1,3 +1,8 @@
-Plant = Plant :: plan   : Plan
-                 alarms : set of Alarm
-inv mk_Plant(plan,alarms) == QualificationOK(plan(per),a.quali)
+Period = token;
+ExpertId = token;
+Expert :: expertid : ExpertId
+          quali : set of Qualification
+inv ex == ex.quali <> {};
+Qualification = <Elec> | <Mech> | <Bio> | <Chem>;
+Alarm :: alarmtext : seq of char
+         quali : Qualification

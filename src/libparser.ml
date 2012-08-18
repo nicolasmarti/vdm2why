@@ -418,13 +418,15 @@ let (|>) v p = (parsecste v) >> p
 ;;
 
 let rec separatedBy (elem: 'a parsingrule) (sep: 'b parsingrule) (pb: parserbuffer) : 'a list =
-  let hd = elem pb in
-  let tl = try (
-    let _ = sep pb in
-    separatedBy elem sep pb
-  ) with
-    | NoMatch -> [] in
-  hd :: tl
+  try (
+    let hd = elem pb in
+    let tl = try (
+      let _ = sep pb in
+      separatedBy elem sep pb
+    ) with
+      | NoMatch -> [] in
+    hd :: tl
+  ) with | NoMatch -> []
 ;; 
 
 (*
@@ -1017,14 +1019,14 @@ let parse_prefix (op: 'a opparser) (t: 'a parsetree) :  ('a parsetree) parsingru
   let sorted_list = List.sort (fun (x1, y1, z1) (x2, y2, z2) -> 
     if String.length x1 < String.length x2 then (                                 
       if x1 = String.sub x2 (String.length x1) 0 then
-        if String.length x1 = String.length x2 then 0 else 1
-      else
-        -1
-    ) else (
-      if x2 = String.sub x1 (String.length x2) 0 then
         if String.length x1 = String.length x2 then 0 else -1
       else
         1
+    ) else (
+      if x2 = String.sub x1 (String.length x2) 0 then
+        if String.length x1 = String.length x2 then 0 else 1
+      else
+        -1
     )
   ) list in
   let parser_list = List.map (fun (x, y, z) -> ( 
@@ -1053,14 +1055,14 @@ let parse_postfix (op: 'a opparser) (t: 'a parsetree) :  ('a parsetree) parsingr
   let sorted_list = List.sort (fun (x1, y1, z1) (x2, y2, z2) -> 
     if String.length x1 < String.length x2 then (                                 
       if x1 = String.sub x2 (String.length x1) 0 then
-        if String.length x1 = String.length x2 then 0 else 1
-      else
-        -1
-    ) else (
-      if x2 = String.sub x1 (String.length x2) 0 then
         if String.length x1 = String.length x2 then 0 else -1
       else
         1
+    ) else (
+      if x2 = String.sub x1 (String.length x2) 0 then
+        if String.length x1 = String.length x2 then 0 else 1
+      else
+        -1
     )
   ) list in
   let parser_list = List.map (fun (x, y, z) -> ( 
@@ -1089,14 +1091,14 @@ let parse_infix (op: 'a opparser) (t: 'a parsetree) : ('a parsetree) parsingrule
   let sorted_list = List.sort (fun (x1, _, _, _) (x2, _, _, _) -> 
     if String.length x1 < String.length x2 then (                                 
       if x1 = String.sub x2 (String.length x1) 0 then
-        if String.length x1 = String.length x2 then 0 else 1
-      else
-        -1
-    ) else (
-      if x2 = String.sub x1 (String.length x2) 0 then
         if String.length x1 = String.length x2 then 0 else -1
       else
         1
+    ) else (
+      if x2 = String.sub x1 (String.length x2) 0 then
+        if String.length x1 = String.length x2 then 0 else 1
+      else
+        -1
     )
   ) list in
   let parser_list = List.map (fun (x, y, z, w) ->  
@@ -1107,7 +1109,6 @@ let parse_infix (op: 'a opparser) (t: 'a parsetree) : ('a parsetree) parsingrule
       let _ = keyword x () pb in
       let endp = cur_pos pb in
       let _ = whitespaces pb in
-      (*printf "parsed infix: %s\n" x;*)
       try
         insert_infix (x, y, z, w (startp, endp)) t
       with

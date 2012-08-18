@@ -27,7 +27,7 @@ let main () =
     ()
   with
     | NoMatch -> 
-      printf "parsing error: %s\n" (errors2string pb); flush Pervasives.stdout;
+      printf "parsing error:\n%s\n" (markerror pb); flush Pervasives.stdout;
       raise Pervasives.Exit
 ;;
 

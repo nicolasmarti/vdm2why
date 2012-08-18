@@ -24,43 +24,34 @@ type vdmtype = TyBool
 	       | TyComp of name * ((name * bool) option * vdmtype) list
 	       | TyOption of vdmtype
 	       | TyUnion of vdmtype list
-	       | TyFct of vdmtype list * bool * vdmtype
+	       | TyFct of vdmtype * bool * vdmtype
+
+type vdmsymb_prefix = Not | Abs | Floor | Minus
+type vdmsymb_postfix
+type vdmsymb_infix = And | Or | Impl | Iff | Eq | Neq | LT | LE | GT | GE | Div | Rem | Mod | Power | Plus | Sub | Mult | Divide
+
+let vdmsymb_infix_assoc (i: vdmsymb_infix) : associativity =
+  match i with
+    | Neq -> NoAssoc
+
+let vdmsymb_infix_prio (i: vdmsymb_infix) : priority =
+  match i with
+    | Neq -> 200
+
+let vdmsymb_prefix_prio (i: vdmsymb_prefix) : priority =
+  0
 
 type vdmterm_ast = TeBool of bool
 		   | TeBottom
-		   | Not of vdmterm
-		   | And of vdmterm * vdmterm
-		   | Or of vdmterm * vdmterm
-		   | Impl of vdmterm * vdmterm
-		   | Iff of vdmterm * vdmterm
-		       
-		   | Eq of vdmterm * vdmterm
-		   | Neq of vdmterm * vdmterm
-		   | LT of vdmterm * vdmterm
-		   | LE of vdmterm * vdmterm
-		   | GT of vdmterm * vdmterm
-		   | GE of vdmterm * vdmterm
+
+		   | TeInfix of vdmsymb_infix * vdmterm * vdmterm
+		   | TePrefix of vdmsymb_prefix * vdmterm
 		       
 		   | TeNat1 of int
 		   | TeNat of int
 		   | TeInt of int
 		   | TeReal of float
-		       
-		   | Abs of vdmterm
-		   | Floor of vdmterm
-		   | Minus of vdmterm
-		       
-		   | Add of vdmterm * vdmterm
-		   | Sub of vdmterm * vdmterm
-		   | Mult of vdmterm * vdmterm
-		   | Divide of vdmterm * vdmterm
-		       
-		   | Div of vdmterm * vdmterm
-		   | Rem of vdmterm * vdmterm
-		   | Mod of vdmterm * vdmterm
-		       
-		   | Power of vdmterm * vdmterm
-		       
+	       
 		   | TeChar of char
 		       
 		   | TeQuote of string
@@ -72,11 +63,15 @@ type vdmterm_ast = TeBool of bool
 
 		   | TeFieldAccess of vdmterm * name
 
+		   | TeSetEnum of vdmterm list
+
 and vdmterm = {
   ast: vdmterm_ast;
   type_: vdmtype option;
   pos: pos;
 }
+
+
 
 let build_term ?(pos: pos = nopos) (a: vdmterm_ast) : vdmterm =
   { ast = a; type_ = None; pos = pos }
