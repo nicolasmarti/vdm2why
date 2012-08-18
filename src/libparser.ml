@@ -1154,11 +1154,14 @@ let stream_of_string s =
     )
 
 (* eos *)
-let eos (pb: parserbuffer) : unit =
-  try
-    Stream.empty pb.inputstream
-  with
-    | Stream.Failure -> raise NoMatch
+let eos : unit parsingrule =
+    error (fun pb ->
+      try
+	Stream.empty pb.inputstream;
+	if (pb.beginpointer < Buffer.length pb.bufferstr) then raise (Stream.Failure)
+      with
+	| Stream.Failure -> raise NoMatch
+    ) "no end of stream"
 
 
 (* assert that pos1 contains pos2 *)

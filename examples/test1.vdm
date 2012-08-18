@@ -1,0 +1,3 @@
+S = bool
+S2 = <Coucou>
+inv x == prout
