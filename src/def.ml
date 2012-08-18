@@ -26,26 +26,13 @@ type vdmtype = TyBool
 	       | TyUnion of vdmtype list
 	       | TyFct of vdmtype * bool * vdmtype
 
-type vdmsymb_prefix = Not | Abs | Floor | Minus
-type vdmsymb_postfix
-type vdmsymb_infix = And | Or | Impl | Iff | Eq | Neq | LT | LE | GT | GE | Div | Rem | Mod | Power | Plus | Sub | Mult | Divide
-
-let vdmsymb_infix_assoc (i: vdmsymb_infix) : associativity =
-  match i with
-    | Neq -> NoAssoc
-
-let vdmsymb_infix_prio (i: vdmsymb_infix) : priority =
-  match i with
-    | Neq -> 200
-
-let vdmsymb_prefix_prio (i: vdmsymb_prefix) : priority =
-  0
 
 type vdmterm_ast = TeBool of bool
 		   | TeBottom
 
-		   | TeInfix of vdmsymb_infix * vdmterm * vdmterm
-		   | TePrefix of vdmsymb_prefix * vdmterm
+		   | TeInfix of string * vdmterm * vdmterm
+		   | TePrefix of string * vdmterm
+		   | TePostfix of string * vdmterm
 		       
 		   | TeNat1 of int
 		   | TeNat of int

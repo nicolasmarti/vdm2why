@@ -68,32 +68,32 @@ let prefixes : (string, (priority * (pos -> vdmterm -> vdmterm))) Hashtbl.t = Ha
 let infixes : (string, (priority * associativity * (pos -> vdmterm -> vdmterm -> vdmterm))) Hashtbl.t = Hashtbl.create 100
 let postfixes : (string, (priority * (pos -> vdmterm -> vdmterm))) Hashtbl.t = Hashtbl.create 100;;
 
-Hashtbl.add prefixes "not" (100, fun pos x -> build_term ~pos:pos (TePrefix (Not, x)));;
-Hashtbl.add prefixes "-" (300, fun pos x -> build_term ~pos:pos (TePrefix (Minus, x)));;
-Hashtbl.add prefixes "abs" (100, fun pos x -> build_term ~pos:pos (TePrefix (Abs, x)));;
-Hashtbl.add prefixes "floor" (100, fun pos x -> build_term ~pos:pos (TePrefix (Floor, x)));;
+Hashtbl.add prefixes "not" (100, fun pos x -> build_term ~pos:pos (TePrefix ("not", x)));;
+Hashtbl.add prefixes "-" (300, fun pos x -> build_term ~pos:pos (TePrefix ("-", x)));;
+Hashtbl.add prefixes "abs" (100, fun pos x -> build_term ~pos:pos (TePrefix ("abs", x)));;
+Hashtbl.add prefixes "floor" (100, fun pos x -> build_term ~pos:pos (TePrefix ("floor", x)));;
 
-Hashtbl.add infixes "and" (90, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix (And, x, y)));;
-Hashtbl.add infixes "or" (80, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix (Or, x, y)));;
-Hashtbl.add infixes "=>" (70, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix (Impl, x, y)));;
-Hashtbl.add infixes "<=>" (70, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix (Iff, x, y)));;
+Hashtbl.add infixes "and" (90, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix ("and", x, y)));;
+Hashtbl.add infixes "or" (80, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix ("or", x, y)));;
+Hashtbl.add infixes "=>" (70, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix ("=>", x, y)));;
+Hashtbl.add infixes "<=>" (70, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix ("<=>", x, y)));;
 
-Hashtbl.add infixes "-" (300, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix (Sub, x, y)));;
-Hashtbl.add infixes "+" (300, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix (Plus, x, y)));;
-Hashtbl.add infixes "*" (310, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix (Mult, x, y)));;
-Hashtbl.add infixes "/" (310, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix (Divide, x, y)));;
-Hashtbl.add infixes "div" (310, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix (Div, x, y)));;
-Hashtbl.add infixes "rem" (310, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix (Rem, x, y)));;
-Hashtbl.add infixes "mod" (310, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix (Rem, x, y)));;
-Hashtbl.add infixes "**" (320, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix (Power, x, y)));;
+Hashtbl.add infixes "-" (300, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix ("-", x, y)));;
+Hashtbl.add infixes "+" (300, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix ("+", x, y)));;
+Hashtbl.add infixes "*" (310, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix ("*", x, y)));;
+Hashtbl.add infixes "/" (310, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix ("/", x, y)));;
+Hashtbl.add infixes "div" (310, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix ("div", x, y)));;
+Hashtbl.add infixes "rem" (310, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix ("rem", x, y)));;
+Hashtbl.add infixes "mod" (310, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix ("mod", x, y)));;
+Hashtbl.add infixes "**" (320, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix ("**", x, y)));;
 
-Hashtbl.add infixes ">=" (200, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix (GE, x, y)));;
-Hashtbl.add infixes "<=" (200, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix (LE, x, y)));;
-Hashtbl.add infixes "<" (200, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix (LT, x, y)));;
-Hashtbl.add infixes ">" (200, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix (GT, x, y)));;
+Hashtbl.add infixes ">=" (200, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix (">=", x, y)));;
+Hashtbl.add infixes "<=" (200, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix ("<=", x, y)));;
+Hashtbl.add infixes "<" (200, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix ("<", x, y)));;
+Hashtbl.add infixes ">" (200, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix (">", x, y)));;
 
-Hashtbl.add infixes "=" (200, NoAssoc, fun pos x y -> build_term ~pos:pos (TeInfix (Eq, x, y)));;
-Hashtbl.add infixes "<>" (200, NoAssoc, fun pos x y -> build_term ~pos:pos (TeInfix (Neq, x, y)));;
+Hashtbl.add infixes "=" (200, NoAssoc, fun pos x y -> build_term ~pos:pos (TeInfix ("=", x, y)));;
+Hashtbl.add infixes "<>" (200, NoAssoc, fun pos x y -> build_term ~pos:pos (TeInfix ("<>", x, y)));;
 
 
 

@@ -2,6 +2,7 @@ open Def
 open Libpprinter
 open Libparser
 open Extlist
+open Parser
 
 let rec withParen (t: token) : token =
   Box [Verbatim "("; t; Verbatim ")"]
@@ -17,6 +18,8 @@ type place = InNotationPrefix of priority * int (* in the sndth place of the app
 	     | Alone (* standalone *)
 
 let verbatims (l: name list) = Verbatim (String.concat "" l)
+
+
 
 let rec vdmtype2token (ty: vdmtype) : token =
   match ty with
@@ -49,6 +52,19 @@ let rec vdmtype2token (ty: vdmtype) : token =
     | TyUnion tys -> Box (intercalates [Space 1; Verbatim "|"; Space 1] (List.map vdmtype2token tys))
     | TyFct (ty1, b, ty2) -> 
       Box [vdmtype2token ty1; Space 1; Verbatim (if b then "+>" else "->"); Space 1; vdmtype2token ty2]
+
+let vdmsymb_infix_assoc (i: string) : associativity =
+  let (_, a, _) = Hashtbl.find infixes i in a
+
+let vdmsymb_infix_prio (i: string) : priority =
+  let (p, _, _) = Hashtbl.find infixes i in p
+
+let vdmsymb_prefix_prio (i: string) : priority =
+  let (p, _) = Hashtbl.find prefixes i in p
+
+let vdmsymb_postfix_prio (i: string) : priority =
+  let (p, _) = Hashtbl.find postfixes i in p
+
 
 let rec vdmterm2token (te: vdmterm) (p: place) : token =
   match te.ast with
@@ -98,7 +114,42 @@ let rec vdmterm2token (te: vdmterm) (p: place) : token =
 
 	(* else we do not need parenthesis *)
 	| _ -> fun x -> x
-      ) (raise (Failure "Failure"))
+      ) (
+	Box [Verbatim pre; vdmterm2token te (InNotationPrefix (myprio, 1))]
+       )
+
+    | TePostfix (post, te) -> 
+      let myprio = vdmsymb_postfix_prio post in
+      (match p with
+	| InArg -> withParen
+	| InNotationPrefix (i, _) when i > myprio -> withParen
+	| _ -> fun x -> x
+      ) (
+	Box [vdmterm2token te (InNotationPostfix (myprio, 1)); Verbatim post]
+       )
+    | TeInfix (inf, te1, te2) -> 
+      let myassoc = vdmsymb_infix_assoc inf in
+      let myprio = vdmsymb_infix_prio inf in
+      (match p with
+	(* if we are an argument *)
+	| InArg -> withParen
+	(* if we are in a notation such that *)
+	(* a prefix or postfix binding more  than us *)
+	| InNotationPrefix (i, _) when i > myprio -> withParen
+	| InNotationPostfix (i, _) when i > myprio -> withParen
+	(* or another infix with higher priority *)
+	| InNotationInfix (_, i, _) when i > myprio -> withParen
+	(* or another infix with same priority depending on the associativity and position *)
+	(* I am the first argument and its left associative *)
+	| InNotationInfix (LeftAssoc, i, 1) when i = myprio -> withParen
+	(* I am the second argument and its right associative *)
+	| InNotationInfix (RightAssoc, i, 2) when i = myprio -> withParen
+
+	(* else we do not need parenthesis *)
+	| _ -> fun x -> x
+      ) (
+	Box [vdmterm2token te1 (InNotationInfix (myassoc, myprio, 1)); Space 1; Verbatim inf; Space 1; vdmterm2token te1 (InNotationInfix (myassoc, myprio, 2))]
+       )
 
 
 let rec vdmtypedecl2token (decl: vdmtypedecl) : token =
