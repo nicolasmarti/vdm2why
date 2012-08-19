@@ -236,6 +236,7 @@ let rec vdmterm2token (te: vdmterm) (p: place) : token =
 
 let rec vdmtypedecl2token (decl: vdmtypedecl) : token =
   match decl with
+    | TypeDecl (n, (TyComp _ as ty), _, None) -> vdmtype2token ty
     | TypeDecl (n, ty, _, None) -> Box [Verbatim n; Space 1; Verbatim "="; Space 1; vdmtype2token ty]
     | TypeDecl (n, ty, pos, Some (p, def, _)) -> 
       Box [Verbatim n; Space 1; Verbatim "="; Space 1; vdmtype2token ty; Newline;
@@ -292,7 +293,7 @@ let rec vdmmoduledecl2token (m: vdmmoduledecl) : token =
   let tys, tes = m in
   Box [
     Verbatim "types"; Newline; Newline;
-    Box (intercalate Newline (List.map vdmtypedecl2token tys)); Newline; Newline;
+    IBox (intercalate Newline (List.map vdmtypedecl2token tys)); Newline; Newline;
     Verbatim "functions"; Newline; Newline;
-    Box (intercalate Newline (List.map vdmtermdecl2token tes)); Newline;
+    IBox (intercalate Newline (List.map vdmtermdecl2token tes)); Newline;
   ]
