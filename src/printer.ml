@@ -39,7 +39,7 @@ let rec vdmtype2token (ty: vdmtype) : token =
     | TyMap (ty1, ty2) -> Box [Verbatim "map"; Space 1; vdmtype2token ty1; Space 1; Verbatim "to"; Space 1; vdmtype2token ty2]
     | TyInjMap (ty1, ty2) -> Box [Verbatim "inmap"; Space 1; vdmtype2token ty1; Space 1; Verbatim "to"; Space 1; vdmtype2token ty2]
     | TyProd tys -> Box (intercalates [Space 1; Verbatim "*"; Space 1] (List.map (fun ty -> vdmtype2token ty) tys))
-    | TyComp (n, fields) -> Box ([Verbatim "n"; Space 1; Verbatim "::"; Space 1] @
+    | TyComp (n, fields) -> Box ([Verbatim n; Space 1; Verbatim "::"; Space 1] @
 				 [Box (intercalate Newline (List.map ( fun field ->
 				   Box (
 				     (match fst field with
