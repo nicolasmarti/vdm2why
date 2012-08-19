@@ -64,6 +64,9 @@ type vdmterm_ast = TeBool of bool
 		   | TeLetIn of (vdmterm * vdmterm) list * vdmterm
 
 		   | TeIota of vdmterm * vdmterm
+		   | TeForall of vdmterm list * vdmterm
+		   | TeExists of vdmterm list * vdmterm
+		   | TeExistsUniq of vdmterm list * vdmterm
 
 and vdmterm = {
   ast: vdmterm_ast;
