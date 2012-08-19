@@ -92,6 +92,8 @@ Hashtbl.add prefixes "-" (400, fun pos x -> build_term ~pos:pos (TePrefix ("-", 
 Hashtbl.add prefixes "abs" (310, fun pos x -> build_term ~pos:pos (TePrefix ("abs", x)));;
 Hashtbl.add prefixes "floor" (310, fun pos x -> build_term ~pos:pos (TePrefix ("floor", x)));;
 Hashtbl.add prefixes "len" (310, fun pos x -> build_term ~pos:pos (TePrefix ("len", x)));;
+Hashtbl.add prefixes "hd" (310, fun pos x -> build_term ~pos:pos (TePrefix ("hd", x)));;
+
 
 Hashtbl.add infixes "and" (90, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix ("and", x, y)));;
 Hashtbl.add infixes "or" (80, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix ("or", x, y)));;
@@ -698,7 +700,43 @@ and parse_basic_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmter
     let () = whitespaces pb in
     build_term ~pos:(startpos, endpos) (TeForall (qs, te2))
   )
+  (* case *)
+  <|> tryrule (fun pb ->
+    let () = whitespaces pb in
+    let startpos = cur_pos pb in
+    let () = after_start_pos leftmost (word "cases") pb in
+    let () = whitespaces pb in
+    let te = parse_term ~leftmost:leftmost pb in
+    let () = whitespaces pb in
+    let () = after_start_pos leftmost (word ":") pb in
+    let () = whitespaces pb in
+    let cases = separatedBy (fun pb ->
+      let patterns = (separatedBy 
+			(parse_term ~leftmost:leftmost)
+			(fun pb ->
+			  let () = whitespaces pb in
+			  let () = after_start_pos leftmost (word ",") pb in
+			  let () = whitespaces pb in
+			  ()
+			) <!> "incorrect patterns") pb in
 
+      let () = whitespaces pb in
+      let () = after_start_pos leftmost (word "->") pb in
+      let () = whitespaces pb in
+      let te = parse_term ~leftmost:leftmost pb in
+      let () = whitespaces pb in
+      patterns, te
+    ) (fun pb ->
+	let () = whitespaces pb in
+	let () = after_start_pos leftmost (word ",") pb in
+	let () = whitespaces pb in
+	()
+    ) pb in
+    let () = whitespaces pb in
+    let endpos = cur_pos pb in
+    let () = whitespaces pb in
+    build_term ~pos:(startpos, endpos) (TeCase (te, cases))
+  )
   (* name, function call *)
   <|> tryrule (fun pb ->
     let () = whitespaces pb in

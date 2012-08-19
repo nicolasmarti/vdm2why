@@ -68,6 +68,8 @@ type vdmterm_ast = TeBool of bool
 		   | TeExists of vdmterm list * vdmterm
 		   | TeExistsUniq of vdmterm list * vdmterm
 
+		   | TeCase of vdmterm * (vdmterm list * vdmterm) list
+
 and vdmterm = {
   ast: vdmterm_ast;
   type_: vdmtype option;
