@@ -44,6 +44,8 @@ type vdmterm_ast = TeBool of bool
 		   | TeQuote of string
 		       
 		   | TeName of string
+		   | TeJoker
+
 		   | TeApp of name * vdmterm list
 
 		   | TeToken of vdmterm
@@ -51,6 +53,8 @@ type vdmterm_ast = TeBool of bool
 		   | TeFieldAccess of vdmterm * name
 
 		   | TeSetEnum of vdmterm list
+		       
+		   | TeSeqEnum of vdmterm list
 
 and vdmterm = {
   ast: vdmterm_ast;
@@ -58,9 +62,14 @@ and vdmterm = {
   pos: pos;
 }
 
-
-
 let build_term ?(pos: pos = nopos) (a: vdmterm_ast) : vdmterm =
   { ast = a; type_ = None; pos = pos }
 
+
 type vdmtypedecl = TypeDecl of name * vdmtype * pos * (vdmterm * vdmterm * pos) option
+
+type vdmtermdecl = TeSignature of name * name list * vdmtype
+		   | TeDef of name * vdmterm list * vdmterm * vdmterm option * vdmterm option * name option
+
+type vdmmoduledecl = vdmtypedecl list * vdmtermdecl list
+		      

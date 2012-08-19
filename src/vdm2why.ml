@@ -16,11 +16,14 @@ let main () =
   in
   let pb = build_parserbuffer stream in
   try 
-    let decls = (many parse_type_decl) pb in
+    let decls = (many parse_module_decl) pb in
+    let m = List.fold_right (fun (hd1, hd2) (tys, tes) ->
+      (hd1 @ tys), (hd2 @ tes)      
+    ) decls ([], []) in
     let _ = whitespaces pb in
     let _ = eos pb in
     let _ = List.map (fun decl ->
-      let token = vdmtypedecl2token decl in
+      let token = vdmmoduledecl2token m in
       let box = token2box token 200 2 in
       printf "%s\n" (box2string box)
     ) decls in

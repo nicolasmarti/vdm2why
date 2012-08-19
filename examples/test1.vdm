@@ -1,3 +1,5 @@
+types 
+
 Period = token;
 ExpertId = token;
 Expert :: expertid : ExpertId
@@ -6,3 +8,62 @@ inv ex == ex.quali <> {};
 Qualification = <Elec> | <Mech> | <Bio> | <Chem>;
 Alarm :: alarmtext : seq of char
          quali : Qualification
+
+atmc:: cardnumber : seq1 of digit
+       expiry : digit * digit * digit * digit
+inv mk_atmc(cardnumber, mk_(m1,m2,-,-)) ==
+     atmc_digval(m1) * 10 + atmc_digval(m2) <= 12 and
+      len cardnumber >= 8
+
+digit = nat
+inv d == d < 10;
+  
+account::  holder : seq1 of char
+           number : seq1 of digit
+           branchcode : seq1 of digit
+           balance: real
+           epin: nat
+inv mk_account(-, number, branchcode,-,-) ==
+  len number = 8 and len branchcode = 6
+
+T = <France> | <Denmark> | <SouthAfrica> | <SaudiArabia>;
+
+Team = <Brazil> | <Norway> | <Morocco> | <Scotland> |
+       <Italy> | <Chile> | <Austria> | <Cameroon> |
+       <France> | <Denmark> | <SouthAfrica> | <SaudiArabia> | 
+       <Nigeria> | <Paraguay> | <Spain> | <Bulgaria> |
+       <Holland> | <Mexico> | <Belgium> | <SouthKorea> |
+       <Germany> | <Yugoslavia> | <Iran> | <UnitedStates> |
+       <Rumania> | <England> | <Colombia> | <Tunisia> |
+       <Argentina> | <Croatia> | <Jamaica> | <Japan>;
+
+GroupName = <A> | <B> | <C> | <D> | <E> | <F> | <G> | <H>;
+       
+
+Score :: team : Team
+         won : nat
+         drawn : nat
+         lost : nat
+         points : nat 
+inv score == score.points = 3 * score.won + score.drawn;
+
+
+SeqGroup :: seq of Score;
+SetGroup :: set of Score;
+MapGroup :: map Team to (nat * nat * nat * nat);
+Group = SeqGroup | SetGroup | MapGroup
+
+Expr = Const | Var | Infix | Cond;
+Const :: (nat | bool);
+Var :: id: seq of char
+       tp: [<Bool> | <Nat>];
+Infix :: Expr * Op * Expr;
+Cond :: test : Expr
+        const : Expr
+        altn : Expr;
+Op = token
+
+functions
+
+print_Const : Const -> seq1 of char
+print_Op : Op -> seq1 of char

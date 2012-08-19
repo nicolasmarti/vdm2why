@@ -47,7 +47,9 @@ let parse_int = applylexingrule (regexp "[+-]?[0-9]+", fun (s:string) -> int_of_
 let keywords = ["true"; "false"; "not"; "and"; "or"; 
 		"abs"; "floor"; "div"; "rem"; "mod";
 		"inv"; "set"; "of"; "seq"; "seq1"; "map"; 
-		"to"; "inmap"; "compose"; "token"; "mk_token"]
+		"to"; "inmap"; "compose"; "token"; "mk_token"; "len";
+		"types"; "functions"
+	       ]
 
 let parse_keywords : unit parsingrule =
   foldp (List.map (fun x -> keyword x ()) keywords)
@@ -69,9 +71,10 @@ let infixes : (string, (priority * associativity * (pos -> vdmterm -> vdmterm ->
 let postfixes : (string, (priority * (pos -> vdmterm -> vdmterm))) Hashtbl.t = Hashtbl.create 100;;
 
 Hashtbl.add prefixes "not" (100, fun pos x -> build_term ~pos:pos (TePrefix ("not", x)));;
-Hashtbl.add prefixes "-" (300, fun pos x -> build_term ~pos:pos (TePrefix ("-", x)));;
-Hashtbl.add prefixes "abs" (100, fun pos x -> build_term ~pos:pos (TePrefix ("abs", x)));;
-Hashtbl.add prefixes "floor" (100, fun pos x -> build_term ~pos:pos (TePrefix ("floor", x)));;
+Hashtbl.add prefixes "-" (400, fun pos x -> build_term ~pos:pos (TePrefix ("-", x)));;
+Hashtbl.add prefixes "abs" (310, fun pos x -> build_term ~pos:pos (TePrefix ("abs", x)));;
+Hashtbl.add prefixes "floor" (310, fun pos x -> build_term ~pos:pos (TePrefix ("floor", x)));;
+Hashtbl.add prefixes "len" (310, fun pos x -> build_term ~pos:pos (TePrefix ("len", x)));;
 
 Hashtbl.add infixes "and" (90, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix ("and", x, y)));;
 Hashtbl.add infixes "or" (80, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix ("or", x, y)));;
@@ -198,7 +201,7 @@ and parse_type_lvl0 ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmtype
     let () = whitespaces pb in
     let () = after_start_pos leftmost (word "token") pb in
     let () = whitespaces pb in
-    TyChar
+    TyToken
   )
   (* quote *)
   <|> tryrule (fun pb ->
@@ -460,6 +463,25 @@ and parse_basic_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmter
     let () = whitespaces pb in
     build_term ~pos:(startpos, endpos) (TeSetEnum tes)
   )
+  (* enumeration list *)
+  <|> tryrule (fun pb ->
+    let () = whitespaces pb in
+    let startpos = cur_pos pb in
+    let _ = after_start_pos leftmost (word "[") pb in
+    let () = whitespaces pb in
+    let tes = separatedBy (parse_term ~leftmost:leftmost) 
+      (fun pb ->
+	let () = whitespaces pb in
+	let () = after_start_pos leftmost (word ",") pb in
+	let () = whitespaces pb in
+	()
+      ) pb in
+    let () = whitespaces pb in
+    let _ = after_start_pos leftmost (word "]") pb in
+    let endpos = cur_pos pb in
+    let () = whitespaces pb in
+    build_term ~pos:(startpos, endpos) (TeSeqEnum tes)
+  )
   (* name, function call *)
   <|> tryrule (fun pb ->
     let () = whitespaces pb in
@@ -485,6 +507,15 @@ and parse_basic_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmter
       | None -> build_term ~pos:pos (TeName q)
       | Some l -> build_term ~pos:(startpos, endpos) (TeApp (q, l))
   )
+  (* joker *)
+  <|> tryrule (fun pb ->
+    let () = whitespaces pb in
+    let q, pos = with_pos (after_start_pos leftmost (word "-")) pb in
+    let _ = notp (parse_term ~leftmost:leftmost) pb in
+    let () = whitespaces pb in
+    build_term ~pos:pos TeJoker
+  )
+  (* paren *)
   <|> tryrule (fun pb ->
     let () = whitespaces pb in
     let te = paren (parse_term ~leftmost:leftmost) pb in
@@ -550,6 +581,8 @@ let parse_type_decl (pb: parserbuffer) : vdmtypedecl = begin
 	  ) pb in
 	let endpos = cur_pos pb in
 	let () = whitespaces pb in
+	let _ = mayberule (word ";") pb in
+	let () = whitespaces pb in
 	n, TyComp (n, fields), (startpos, endpos)
       )) pb in
 
@@ -574,4 +607,64 @@ let parse_type_decl (pb: parserbuffer) : vdmtypedecl = begin
     TypeDecl (name, ty, pos, inv)
   ) 
   ) "not a valide type declaration"
+end pb
+
+let parse_term_decl (pb: parserbuffer) : vdmtermdecl = begin
+  error (
+  (* Signature *)
+  tryrule (fun pb ->
+    let startpos = cur_pos pb in
+    let n = parse_name pb in
+    let () = whitespaces pb in
+    let tyvars = mayberule (fun pb ->
+
+      let _ = after_start_pos startpos (word "[") pb in
+      let () = whitespaces pb in
+      let tes = separatedBy parse_name 
+	(fun pb ->
+	  let () = whitespaces pb in
+	  let () = after_start_pos startpos (word ",") pb in
+	  let () = whitespaces pb in
+	  ()
+	) pb in
+      let () = whitespaces pb in
+      let _ = after_start_pos startpos (word "]") pb in
+      tes
+
+    ) pb in
+
+    let () = whitespaces pb in
+    let _ = after_start_pos startpos (word ":") pb in
+    let () = whitespaces pb in
+    let ty = parse_type ~leftmost:startpos pb in
+    let () = whitespaces pb in
+    
+    TeSignature (n,
+		 (match tyvars with | None -> [] | Some l -> l),
+		 ty
+    )
+
+  )
+  ) "not a valide term declaration"
+end pb
+
+let parse_module_decl (pb: parserbuffer) : vdmmoduledecl = begin
+  error (
+  (* parse types *)
+  tryrule (fun pb ->
+    let () = whitespaces pb in
+    let () = word "types" pb in
+    let () = whitespaces pb in
+    let tys = many parse_type_decl pb in
+    (tys, [])
+  )
+  (* parse functions *)
+  <|> tryrule (fun pb ->
+    let () = whitespaces pb in
+    let () = word "functions" pb in
+    let () = whitespaces pb in
+    let tes = many parse_term_decl pb in
+    ([], tes)
+  )
+  ) "not a valide module declaration"
 end pb

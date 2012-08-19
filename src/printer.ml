@@ -27,13 +27,15 @@ let rec vdmtype2token (ty: vdmtype) : token =
     | TyNat1 -> Verbatim "nat1"
     | TyNat -> Verbatim "nat"
     | TyInt -> Verbatim "int"
+    | TyReal -> Verbatim "real"
     | TyChar -> Verbatim "char"
+    | TyToken -> Verbatim "token"
     | TyQuote s -> verbatims ["<"; s; ">"]
     | TyVar i -> verbatims ["?"; string_of_int i]
     | TyName (n, _) -> Verbatim n
     | TySet ty -> Box [Verbatim "set of"; Space 1; vdmtype2token ty]
-    | TySeq ty -> Box [Verbatim "seq"; Space 1; vdmtype2token ty]
-    | TySeq1 ty -> Box [Verbatim "seq1"; Space 1; vdmtype2token ty]
+    | TySeq ty -> Box [Verbatim "seq of"; Space 1; vdmtype2token ty]
+    | TySeq1 ty -> Box [Verbatim "seq1 of"; Space 1; vdmtype2token ty]
     | TyMap (ty1, ty2) -> Box [Verbatim "map"; Space 1; vdmtype2token ty1; Space 1; Verbatim "to"; Space 1; vdmtype2token ty2]
     | TyInjMap (ty1, ty2) -> Box [Verbatim "inmap"; Space 1; vdmtype2token ty1; Space 1; Verbatim "to"; Space 1; vdmtype2token ty2]
     | TyProd tys -> Box (intercalates [Space 1; Verbatim "*"; Space 1] (List.map (fun ty -> vdmtype2token ty) tys))
@@ -83,6 +85,7 @@ let rec vdmterm2token (te: vdmterm) (p: place) : token =
 	      ) @
 	      [verbatims [")"]]
       )
+    | TeJoker -> Verbatim "-"
     | TeName n -> Verbatim n
     | TeToken te -> Box [Verbatim "mk_token("; vdmterm2token te Alone; Verbatim ")"]
     | TeFieldAccess (te, n) -> Box [vdmterm2token te InArg; verbatims ["."; n]]
@@ -93,6 +96,14 @@ let rec vdmterm2token (te: vdmterm) (p: place) : token =
 	       )
 	      ) @
 	      [verbatims ["}"]]
+      )
+    | TeSeqEnum tes -> 
+      Box ([Verbatim "["] @
+	      (intercalates [Verbatim ","; Space 1] (
+		List.map (fun te -> vdmterm2token te InArg) tes
+	       )
+	      ) @
+	      [verbatims ["]"]]
       )
 
     | TePrefix (pre, te) -> 
@@ -148,7 +159,7 @@ let rec vdmterm2token (te: vdmterm) (p: place) : token =
 	(* else we do not need parenthesis *)
 	| _ -> fun x -> x
       ) (
-	Box [vdmterm2token te1 (InNotationInfix (myassoc, myprio, 1)); Space 1; Verbatim inf; Space 1; vdmterm2token te1 (InNotationInfix (myassoc, myprio, 2))]
+	Box [vdmterm2token te1 (InNotationInfix (myassoc, myprio, 1)); Space 1; Verbatim inf; Space 1; vdmterm2token te2 (InNotationInfix (myassoc, myprio, 2))]
        )
 
 
@@ -157,6 +168,60 @@ let rec vdmtypedecl2token (decl: vdmtypedecl) : token =
     | TypeDecl (n, ty, _, None) -> Box [Verbatim n; Space 1; Verbatim "="; Space 1; vdmtype2token ty]
     | TypeDecl (n, ty, pos, Some (p, def, _)) -> 
       Box [Verbatim n; Space 1; Verbatim "="; Space 1; vdmtype2token ty; Newline;
-	   verbatims ["inv_"; n]; Space 1; Verbatim ":"; Space 1; vdmtype2token (TyFct (TyName (n, pos), true, TyBool)); Space 1; Verbatim "=="; Space 1; vdmterm2token def Alone
+	   verbatims ["inv_"; n]; Space 1; Verbatim ":"; Space 1; vdmtype2token (TyFct (TyName (n, pos), true, TyBool)); Newline; 
+	   verbatims ["inv_"; n; "("]; vdmterm2token p Alone; Verbatim ")"; Space 1; Verbatim "=="; Space 1; vdmterm2token def Alone
 	  ]
 
+let rec vdmtermdecl2token (decl: vdmtermdecl) : token =
+  match decl with
+    | TeSignature (n, tys, ty) ->
+      Box ([Verbatim n] @
+	      ( match tys with
+		| [] -> []
+		| _ -> [Box ([Verbatim "["] @
+				(intercalates [Verbatim ","; Space 1] (
+				  List.map (fun n -> Verbatim n) tys
+				 )
+				) @
+				[verbatims ["]"]]
+	      
+		)]) @
+	      [Space 1; Verbatim ":"; Space 1; vdmtype2token ty]
+      )
+    | TeDef (n, args, body, pre, post, measure)->
+      Box ([Verbatim n] @
+	      ( match args with
+		| [] -> []
+		| _ -> [Box ([Verbatim "("] @
+				(intercalates [Verbatim ","; Space 1] (
+				  List.map (fun te -> vdmterm2token te Alone) args
+				 )
+				) @
+				[verbatims [")"]]
+	      
+		)]) @
+	      [Space 1; Verbatim "=="; Space 1; vdmterm2token body Alone] @
+	      (match pre with
+		| None -> []
+		| Some pre -> [Verbatim "pre"; Space 1; Verbatim "=="; Space 1; vdmterm2token pre Alone ]
+	      ) @
+	      (match post with
+		| None -> []
+		| Some post -> [Verbatim "post"; Space 1; Verbatim "=="; Space 1; vdmterm2token post Alone]
+	      ) @
+	      (match measure with
+		| None -> []
+		| Some n -> [Verbatim "measure"; Space 1; Verbatim "=="; Space 1; Verbatim n]
+	      )
+      )
+
+
+
+let rec vdmmoduledecl2token (m: vdmmoduledecl) : token =
+  let tys, tes = m in
+  Box [
+    Verbatim "types"; Newline; Newline;
+    Box (intercalate Newline (List.map vdmtypedecl2token tys)); Newline; Newline;
+    Verbatim "functions"; Newline; Newline;
+    Box (intercalate Newline (List.map vdmtermdecl2token tes)); Newline;
+  ]
