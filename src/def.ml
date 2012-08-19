@@ -55,13 +55,16 @@ type vdmterm_ast = TeBool of bool
 		   | TeSetEnum of vdmterm list
 		   | TeSetComprehension of vdmterm * vdmterm list
 		   | TeInSet of vdmterm * vdmterm
+		   | TeInSetDom of vdmterm * vdmterm
+		   | TeInSetRng of vdmterm * vdmterm
 
 		   | TeMapEnum of (vdmterm * vdmterm) list
 
 		   | TeSeqEnum of vdmterm list
-
+		   
 		   | TeIfte of vdmterm * vdmterm * vdmterm
 		   | TeLetIn of (vdmterm * vdmterm) list * vdmterm
+		   | TeLetInSt of vdmterm * vdmterm * vdmterm
 
 		   | TeIota of vdmterm * vdmterm
 		   | TeForall of vdmterm list * vdmterm

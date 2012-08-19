@@ -97,6 +97,15 @@ let rec vdmterm2token (te: vdmterm) (p: place) : token =
 	      ) @
 	      [verbatims ["}"]]
       )
+
+    | TeSetComprehension (te, tes) -> 
+      Box ([Verbatim "{"; Space 1; vdmterm2token te Alone; Space 1; Verbatim "|"; Space 1] @
+	      (intercalates [Verbatim ","; Space 1] (
+		List.map (fun te -> vdmterm2token te InArg) tes
+	       )
+	      ) @
+	      [verbatims ["}"]]
+      )
     | TeSeqEnum tes -> 
       Box ([Verbatim "["] @
 	      (intercalates [Verbatim ","; Space 1] (
@@ -105,8 +114,68 @@ let rec vdmterm2token (te: vdmterm) (p: place) : token =
 	      ) @
 	      [verbatims ["]"]]
       )
+    | TeMapEnum [] -> Verbatim "{|->}"
+    | TeMapEnum tes -> 
+      Box ([Verbatim "{"] @
+	      (intercalates [Verbatim ","; Space 1] (
+		List.map (fun (te1, te2) -> Box [vdmterm2token te1 InArg; Space 1; Verbatim "|->"; Space 1; vdmterm2token te2 InArg]) tes
+	       )
+	      ) @
+	      [verbatims ["}"]]
+      )
+    | TeInSet (te1, te2) ->
+      Box [vdmterm2token te1 Alone; Space 1; Verbatim "in set"; Space 1; vdmterm2token te2 Alone]
+    | TeInSetDom (te1, te2) ->
+      Box [vdmterm2token te1 Alone; Space 1; Verbatim "in set dom"; Space 1; vdmterm2token te2 Alone]
+    | TeInSetRng (te1, te2) ->
+      Box [vdmterm2token te1 Alone; Space 1; Verbatim "in set rng"; Space 1; vdmterm2token te2 Alone]
     | TeIfte (te1, te2, te3) -> 
       Box [Verbatim "if"; Space 1; vdmterm2token te1 Alone; Space 1; Verbatim "then"; Space 1; vdmterm2token te2 Alone; Space 1; Verbatim "else"; Space 1; vdmterm2token te3 Alone]
+    | TeLetIn (cases, te3) -> 
+      Box [Verbatim "let"; Space 1;
+	   Box (intercalate Newline (
+	     List.map (fun (te1, te2) -> Box [vdmterm2token te1 Alone; Space 1; Verbatim "="; Space 1; vdmterm2token te2 Alone]) cases
+	   )
+	   ); Space 1; Verbatim "in"; Space 1;
+	   vdmterm2token te3 Alone
+	  ]
+    | TeLetInSt (te1, te2, te3) -> 
+      Box [Verbatim "let"; Space 1; vdmterm2token te1 Alone; Space 1; Verbatim "be st"; 
+	   Space 1; vdmterm2token te2 Alone; Space 1; Verbatim "in"; Space 1; vdmterm2token te3 Alone
+	  ]
+    | TeIota (te1, te2) ->
+      Box [Verbatim "iota"; Space 1; vdmterm2token te1 Alone; Space 1; Verbatim "&"; 
+	   Space 1; vdmterm2token te2 Alone]
+    | TeForall (te1, te2) ->
+      Box ([Verbatim "forall"; Space 1] @
+	      (intercalates [Verbatim ","; Space 1] (
+		List.map (fun te1 -> vdmterm2token te1 Alone) te1
+	       )
+	      ) @ [Space 1 ; Verbatim "&"; Space 1; vdmterm2token te2 Alone]
+      )
+    | TeExists (te1, te2) ->
+      Box ([Verbatim "forall"; Space 1] @
+	      (intercalates [Verbatim ","; Space 1] (
+		List.map (fun te1 -> vdmterm2token te1 Alone) te1
+	       )
+	      ) @ [Space 1 ; Verbatim "&"; Space 1; vdmterm2token te2 Alone]
+      )
+    | TeExistsUniq (te1, te2) ->
+      Box ([Verbatim "forall"; Space 1] @
+	      (intercalates [Verbatim ","; Space 1] (
+		List.map (fun te1 -> vdmterm2token te1 Alone) te1
+	       )
+	      ) @ [Space 1 ; Verbatim "&"; Space 1; vdmterm2token te2 Alone]
+      )
+    | TeCase (te1, te2) ->
+      Box ([Verbatim "cases"; Space 1; vdmterm2token te1 Alone; Space 1; Verbatim ":"; Newline] @
+	      (List.map (fun (patterns, body) ->
+		Box [Verbatim "|"; Space 1;
+		     Box (intercalates [Verbatim ","; Space 1] (List.map (fun te -> vdmterm2token te Alone) patterns)); Verbatim "->"; Space 1; vdmterm2token body Alone
+		]
+	       ) te2
+	      )
+      )
 
     | TePrefix (pre, te) -> 
       let myprio = vdmsymb_prefix_prio pre in
