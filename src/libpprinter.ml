@@ -298,13 +298,10 @@ let rec token2box (t: token) (w: int) (indent: int) : box =
 
 	      | t ->
 		  let b = token2box t remainingwidth indent in
-		    if (b.width > remainingwidth || b.height > 1) then (
+		    if (b.width > remainingwidth) then (
 
 		      let b = token2box t (w - indent) indent in
-			if (b.height > 1) then 
-			  (w - indent, indentbox::[], totalboxes @ lineboxes::(indentbox :: b :: [])::[])
-			else
-			  (w - indent - b.width, indentbox :: b :: [], totalboxes @ lineboxes::[])
+			  (w - b.width, b :: [], totalboxes @ lineboxes::[])
 
 		    ) else (
 
