@@ -105,6 +105,8 @@ let rec vdmterm2token (te: vdmterm) (p: place) : token =
 	      ) @
 	      [verbatims ["]"]]
       )
+    | TeIfte (te1, te2, te3) -> 
+      Box [Verbatim "if"; Space 1; vdmterm2token te1 Alone; Space 1; Verbatim "then"; Space 1; vdmterm2token te2 Alone; Space 1; Verbatim "else"; Space 1; vdmterm2token te3 Alone]
 
     | TePrefix (pre, te) -> 
       let myprio = vdmsymb_prefix_prio pre in

@@ -53,8 +53,13 @@ type vdmterm_ast = TeBool of bool
 		   | TeFieldAccess of vdmterm * name
 
 		   | TeSetEnum of vdmterm list
-		       
+		   | TeSetComprehension of vdmterm * vdmterm list
+		   | TeInSet of vdmterm * vdmterm
+
 		   | TeSeqEnum of vdmterm list
+
+		   | TeIfte of vdmterm * vdmterm * vdmterm
+		   | TeLetIn of (vdmterm * vdmterm) list * vdmterm
 
 and vdmterm = {
   ast: vdmterm_ast;

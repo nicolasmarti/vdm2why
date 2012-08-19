@@ -66,4 +66,74 @@ Op = token
 functions
 
 print_Const : Const -> seq1 of char
+print_Const(mk_Const(c)) ==
+  if is_nat(c) then "nat"
+    else -- must be bool
+       "bool";
+
 print_Op : Op -> seq1 of char
+print_Op(-) == "op"
+
+sc_init : set of Team -> set of Score
+sc_init (ts) ==
+  { mk_Score (t,0,0,0,0) | t in set ts };
+
+
+let_example2 : Score * Score -> bool
+let_example2 (sc1,sc2) ==
+  let mk_Score (-,w1,-,-,p1) = sc1,
+      mk_Score (-,w2,-,-,p2) = sc2
+  in (p1 > p2) or
+     (p1 = p2) and (w1 > w2);
+
+win : Team * Team * set of Score -> set of Score
+win (wt,lt,gp) ==
+  let wsc = iota sc in set gp & sc.team = wt,
+      lsc = iota sc in set gp & sc.team = lt
+  in let new_wsc = mu(wsc, won |-> wsc.won + 1,
+                           points |-> wsc.points + 3),
+         new_lsc = mu(lsc, lost |-> lsc.lost + 1)
+     in (gp \ {wsc,lsc}) union {new_wsc, new_lsc}
+pre forall sc1, sc2 in set gp & sc1<> sc2 <=> sc1.team <> sc2.team
+    and {wt,lt} subset {sc.team | sc in set gp};
+
+
+
+build_score : Team * nat * nat * nat * nat -> Score
+build_score (t,w,d,l,p) ==
+  if 3 * w + d = p
+  then mk_Score(t,w,d,l,p)
+  else undefined;
+
+promoted : seq of Score -> Team * Team
+promoted([sc1,sc2]^-) == mk_(sc1.team,sc2.team);
+
+
+group_winner : Group -> Team
+group_winner(g) ==
+  cases g:
+    mk_SeqGroup(l) -> (hd l).team,
+    mk_SetGroup(s) -> let sc in set s be st
+                        forall sc' in set s \ {sc} 
+                          & sc.points >= sc'.points
+                      in sc.team,
+    mk_MapGroup(m) -> let t in set dom m be st
+                        let mk_(-,-,-,p) = m(t)
+                        in forall mk_(-,-,-,p') in set rng m &
+                             p >= p'
+                      in t
+  end;
+
+
+clear_winner : set of Score -> bool
+clear_winner (scs) ==
+  exists sc in set scs & 
+    forall sc' in set scs \ {sc} & sc.points > sc'.points;
+
+winner_by_more_wins : set of Score -> bool
+winner_by_more_wins (scs) ==
+  exists sc in set scs &
+    forall sc' in set scs \ {sc} &
+      (sc.points > sc'.points) or
+      (sc.points = sc'.points and sc.won > sc'.won)
+
