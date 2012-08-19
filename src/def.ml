@@ -56,10 +56,14 @@ type vdmterm_ast = TeBool of bool
 		   | TeSetComprehension of vdmterm * vdmterm list
 		   | TeInSet of vdmterm * vdmterm
 
+		   | TeMapEnum of (vdmterm * vdmterm) list
+
 		   | TeSeqEnum of vdmterm list
 
 		   | TeIfte of vdmterm * vdmterm * vdmterm
 		   | TeLetIn of (vdmterm * vdmterm) list * vdmterm
+
+		   | TeIota of vdmterm * vdmterm
 
 and vdmterm = {
   ast: vdmterm_ast;

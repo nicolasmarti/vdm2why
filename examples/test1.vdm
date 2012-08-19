@@ -81,7 +81,7 @@ sc_init (ts) ==
 
 let_example2 : Score * Score -> bool
 let_example2 (sc1,sc2) ==
-  let mk_Score (-,w1,-,-,p1) = sc1,
+  let mk_Score (-,w1,-,-,p1) = sc1, 
       mk_Score (-,w2,-,-,p2) = sc2
   in (p1 > p2) or
      (p1 = p2) and (w1 > w2);

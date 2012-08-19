@@ -371,7 +371,18 @@ end pb
 let rec parse_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmterm = begin 
   error (
     tryrule parse_op_term
-    <|> tryrule (parse_term_lvl1 ~leftmost:leftmost)
+    <|> tryrule (fun pb -> 
+      let te = parse_term_lvl1 ~leftmost:leftmost pb in
+      let () = whitespaces pb in
+      let ty = mayberule (fun pb ->
+	let _ = after_start_pos leftmost (word ":") pb in
+	let () = whitespaces pb in
+	let ty = parse_type ~leftmost:leftmost pb in
+	let () = whitespaces pb in
+	ty
+      ) pb in
+      {te with type_ = ty}
+    )
   ) "not a valid term"
 end pb
 
@@ -526,6 +537,44 @@ and parse_basic_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmter
     let () = whitespaces pb in
     build_term ~pos:(startpos, endpos) (TeSeqEnum tes)
   )
+  (* enumeration map *)
+  <|> tryrule (fun pb ->
+    let () = whitespaces pb in
+    let startpos = cur_pos pb in
+    let _ = after_start_pos leftmost (word "{") pb in
+    let () = whitespaces pb in
+    let tes = separatedBy (fun pb ->
+      let te1 = parse_term ~leftmost:leftmost pb in
+      let () = whitespaces pb in
+      let () = after_start_pos leftmost (word "|->") pb in
+      let () = whitespaces pb in
+      let te2 = parse_term ~leftmost:leftmost pb in
+      te1, te2
+    ) 
+      (fun pb ->
+	let () = whitespaces pb in
+	let () = after_start_pos leftmost (word ",") pb in
+	let () = whitespaces pb in
+	()
+      ) pb in
+    let () = whitespaces pb in
+    let _ = after_start_pos leftmost (word "}") pb in
+    let endpos = cur_pos pb in
+    let () = whitespaces pb in
+    build_term ~pos:(startpos, endpos) (TeMapEnum tes)
+  )
+  <|> tryrule (fun pb ->
+    let () = whitespaces pb in
+    let startpos = cur_pos pb in
+    let _ = after_start_pos leftmost (word "{") pb in
+    let () = whitespaces pb in
+    let () = after_start_pos leftmost (word "|->") pb in
+    let () = whitespaces pb in
+    let _ = after_start_pos leftmost (word "}") pb in
+    let endpos = cur_pos pb in
+    let () = whitespaces pb in
+    build_term ~pos:(startpos, endpos) (TeMapEnum [])
+  )
   (* joker *)
   <|> tryrule (fun pb ->
     let () = whitespaces pb in
@@ -558,16 +607,23 @@ and parse_basic_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmter
     let () = whitespaces pb in
     let startpos = cur_pos pb in
     let () = after_start_pos leftmost (word "let") pb in
-    let tes = many1 (fun pb ->
+    let () = whitespaces pb in
+    let tes = separatedBy (fun pb ->
       let () = whitespaces pb in
-      let te1 = parse_term ~leftmost:leftmost pb in
+      let te1 = parse_basic_term ~leftmost:leftmost pb in
       let () = whitespaces pb in
       let () = after_start_pos leftmost (word "=") pb in
       let () = whitespaces pb in
       let te2 = parse_term ~leftmost:leftmost pb in
       let () = whitespaces pb in
       te1, te2
+    ) (fun pb ->
+	let () = whitespaces pb in
+	let () = after_start_pos leftmost (word ",") pb in
+	let () = whitespaces pb in
+	()
     ) pb in
+    let () = whitespaces pb in
     let () = after_start_pos leftmost (word "in") pb in
     let () = whitespaces pb in
     let te3 = parse_term ~leftmost:leftmost pb in
@@ -588,6 +644,22 @@ and parse_basic_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmter
     String.iter (fun c -> acc := (build_term (TeChar c))::!acc) s;
     build_term ~pos:(startpos, endpos) (TeSeqEnum (List.rev !acc))
   )
+  (* quantification *)
+  <|> tryrule (fun pb ->
+    let () = whitespaces pb in
+    let startpos = cur_pos pb in
+    let () = after_start_pos leftmost (word "iota") pb in
+    let () = whitespaces pb in
+    let te1 = parse_term ~leftmost:leftmost pb in
+    let () = whitespaces pb in
+    let () = after_start_pos leftmost (word "&") pb in
+    let () = whitespaces pb in
+    let te2 = parse_term ~leftmost:leftmost pb in
+    let endpos = cur_pos pb in
+    let () = whitespaces pb in
+    build_term ~pos:(startpos, endpos) (TeIota (te1, te2))
+  )
+
   (* name, function call *)
   <|> tryrule (fun pb ->
     let () = whitespaces pb in
@@ -635,7 +707,6 @@ and parse_vdmop: vdmterm opparser = {
 and parse_op_term (pb: parserbuffer) : vdmterm = begin
   opparse parse_vdmop
 end pb
-
 
 let parse_type_decl (pb: parserbuffer) : vdmtypedecl = begin
   error (
@@ -690,7 +761,7 @@ let parse_type_decl (pb: parserbuffer) : vdmtypedecl = begin
       let startpos = cur_pos pb in
       let () = word "inv" pb in
       let () = whitespaces pb in
-      let pattern = parse_term ~leftmost:startpos pb in
+      let pattern = parse_basic_term ~leftmost:startpos pb in
       let () = whitespaces pb in
       let () = error (word "==") "inv should be defined with == " pb in
       let () = whitespaces pb in
