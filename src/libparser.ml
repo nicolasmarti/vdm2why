@@ -786,7 +786,7 @@ let insert_primary (a: 'a) (t: 'a parsetree) : 'a parsetree =
   match t with
     | Leaf root ->
       Node (PrimaryNode a, root)
-    | _ -> printf "insert_primary: not a Leaf root\n"; raise NoMatch
+    | _ -> (*printf "insert_primary: not a Leaf root\n";*) raise NoMatch
 ;;
 
 (* inserting a prefix: the next place to add is the Leaf *)
