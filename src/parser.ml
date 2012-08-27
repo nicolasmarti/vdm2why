@@ -299,6 +299,7 @@ and parse_type_lvl0 ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmtype
   (* composite types *)
   <|> tryrule (fun pb ->
     let () = whitespaces pb in
+    let startpos = cur_pos pb in
     let n = after_start_pos leftmost parse_name pb in
     let () = whitespaces pb in
     let () = after_start_pos leftmost (word "::") pb in
@@ -308,16 +309,18 @@ and parse_type_lvl0 ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmtype
 	let name = error (
 	  mayberule (fun pb ->
 	    let () = whitespaces pb in
-	    let n' = after_start_pos leftmost parse_name pb in
+	    let n' = after_start_pos startpos parse_name pb in
 	    let () = whitespaces pb in
-	    let b = (tryrule (fun pb -> after_start_pos leftmost (word ":-") pb; false) <|> tryrule (fun pb -> after_start_pos leftmost (word ":") pb; true)) pb in
+	    let b = (tryrule (fun pb -> after_start_pos startpos (word ":-") pb; false) <|> tryrule (fun pb -> after_start_pos startpos (word ":") pb; true)) pb in
 	    let () = whitespaces pb in
 	    n', b
 	  )
 	) "not a valid field" pb in 
-	let ty = parse_type ~leftmost:leftmost pb in
+	let ty = parse_type ~leftmost:startpos pb in
 	name, ty
       ) pb in
+    let () = whitespaces pb in
+    let () = after_start_pos leftmost (word ";") pb in
     let () = whitespaces pb in
     TyComp (n, fields)
   )

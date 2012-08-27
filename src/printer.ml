@@ -39,8 +39,8 @@ let rec vdmtype2token (ty: vdmtype) : token =
     | TyMap (ty1, ty2) -> Box [Verbatim "map"; Space 1; vdmtype2token ty1; Space 1; Verbatim "to"; Space 1; vdmtype2token ty2]
     | TyInjMap (ty1, ty2) -> Box [Verbatim "inmap"; Space 1; vdmtype2token ty1; Space 1; Verbatim "to"; Space 1; vdmtype2token ty2]
     | TyProd tys -> Box (intercalates [Space 1; Verbatim "*"; Space 1] (List.map (fun ty -> vdmtype2token ty) tys))
-    | TyComp (n, fields) -> Box ([Verbatim "n"; Space 1; Verbatim "::"; Space 1] @
-				 [Box (intercalate Newline (List.map ( fun field ->
+    | TyComp (n, fields) -> IBox ([Verbatim n; Space 1; Verbatim "::"; Space 1] @
+				 [IBox (intercalate Newline (List.map ( fun field ->
 				   Box (
 				     (match fst field with
 				       | None -> []
@@ -236,6 +236,23 @@ let rec vdmterm2token (te: vdmterm) (p: place) : token =
 
 let rec vdmtypedecl2token (decl: vdmtypedecl) : token =
   match decl with
+    | TypeDecl (n, TyComp (n', fields), _, inv) when n = n' -> Box ([Verbatim n; Space 1; Verbatim "::"; Space 1; 
+								      IBox (intercalate Newline (List.map ( fun field ->
+									Box (
+									  (match fst field with
+									    | None -> []
+									    | Some (n, true) -> [Verbatim n; Space 1; Verbatim ":"; Space 1]
+									    | Some (n, false) -> [Verbatim n; Space 1; Verbatim ":-"; Space 1]
+									  ) @
+									    [vdmtype2token (snd field); Newline]
+									)
+								      ) fields))
+								     ] @ (match inv with
+								       | None -> []
+								       | Some (p, def, _) ->
+									 [verbatims ["inv_"; n; "("]; vdmterm2token p Alone; Verbatim ")"; Space 1; Verbatim "=="; Space 1; vdmterm2token def Alone]
+    )
+    )
     | TypeDecl (n, ty, _, None) -> Box [Verbatim n; Space 1; Verbatim "="; Space 1; vdmtype2token ty]
     | TypeDecl (n, ty, pos, Some (p, def, _)) -> 
       Box [Verbatim n; Space 1; Verbatim "="; Space 1; vdmtype2token ty; Newline;
@@ -292,7 +309,7 @@ let rec vdmmoduledecl2token (m: vdmmoduledecl) : token =
   let tys, tes = m in
   Box [
     Verbatim "types"; Newline; Newline;
-    Box (intercalate Newline (List.map vdmtypedecl2token tys)); Newline; Newline;
+    IBox (intercalate Newline (List.map vdmtypedecl2token tys)); Newline; Newline;
     Verbatim "functions"; Newline; Newline;
-    Box (intercalate Newline (List.map vdmtermdecl2token tes)); Newline;
+    IBox (intercalate Newline (List.map vdmtermdecl2token tes)); Newline;
   ]

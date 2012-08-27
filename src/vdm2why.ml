@@ -22,12 +22,9 @@ let main () =
     ) decls ([], []) in
     let _ = whitespaces pb in
     let _ = eos pb in
-    let _ = List.map (fun decl ->
-      let token = vdmmoduledecl2token m in
-      let box = token2box token 200 2 in
-      printf "%s\n" (box2string box)
-    ) decls in
-    ()
+    let token = vdmmoduledecl2token m in
+    let box = token2box token 200 2 in
+    printf "%s\n" (box2string box)
   with
     | NoMatch -> 
       printf "parsing error:\n%s\n" (markerror pb); flush Pervasives.stdout;
