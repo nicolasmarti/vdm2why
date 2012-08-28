@@ -139,3 +139,7 @@ group_winner(g) ==
 
   end;
 
+
+values
+
+  GroupA = 2

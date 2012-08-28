@@ -29,9 +29,6 @@ Group = SeqGroup | SetGroup | MapGroup
 
 values
 
---v1 = <France> = <Denmark>;
---v2 = <SaudiArabia> <> <SouthAfrica>;
-
 GroupA = [ mk_Score(<Brazil>,2,0,1,6), 
            mk_Score(<Norway>,1,2,0,5),
            mk_Score(<Morocco>,1,1,1,4),

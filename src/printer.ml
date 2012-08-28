@@ -86,6 +86,7 @@ let rec vdmterm2token (te: vdmterm) (p: place) : token =
 	      [verbatims [")"]]
       )
     | TeJoker -> Verbatim "-"
+    | TeDotDotDot -> Verbatim "..."
     | TeName n -> Verbatim n
     | TeToken te -> Box [Verbatim "mk_token("; vdmterm2token te Alone; Verbatim ")"]
     | TeFieldAccess (te, n) -> Box [vdmterm2token te InArg; verbatims ["."; n]]
@@ -98,13 +99,21 @@ let rec vdmterm2token (te: vdmterm) (p: place) : token =
 	      [verbatims ["}"]]
       )
 
-    | TeSetComprehension (te, tes) -> 
+    | TeSetComprehension (te, tes, te') -> 
       Box ([Verbatim "{"; Space 1; vdmterm2token te Alone; Space 1; Verbatim "|"; Space 1] @
 	      (intercalates [Verbatim ","; Space 1] (
 		List.map (fun te -> vdmterm2token te InArg) tes
 	       )
 	      ) @
-	      [verbatims ["}"]]
+	      [Space 1; Verbatim "&"; Space 1; vdmterm2token te' Alone; Space 1; Verbatim "}"]
+      )
+    | TeSeqComprehension (te, tes, te') -> 
+      Box ([Verbatim "["; Space 1; vdmterm2token te Alone; Space 1; Verbatim "|"; Space 1] @
+	      (intercalates [Verbatim ","; Space 1] (
+		List.map (fun te -> vdmterm2token te InArg) tes
+	       )
+	      ) @
+	      [Space 1; Verbatim "&"; Space 1; vdmterm2token te' Alone; Space 1; Verbatim "]"]
       )
     | TeSeqEnum tes -> 
       Box ([Verbatim "["] @
@@ -306,7 +315,7 @@ let rec vdmtermdecl2token (decl: vdmtermdecl) : token =
 
 
 let rec vdmmoduledecl2token (m: vdmmoduledecl) : token =
-  let tys, tes = m in
+  let tys, tes, _ = m in
   Box [
     Verbatim "types"; Newline; Newline;
     IBox (intercalate Newline (List.map vdmtypedecl2token tys)); Newline; Newline;

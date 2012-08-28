@@ -44,6 +44,8 @@ type vdmterm_ast = TeBool of bool
 		   | TeQuote of string
 		       
 		   | TeName of string
+
+		   | TeDotDotDot
 		   | TeJoker
 
 		   | TeApp of name * vdmterm list
@@ -53,7 +55,7 @@ type vdmterm_ast = TeBool of bool
 		   | TeFieldAccess of vdmterm * name
 
 		   | TeSetEnum of vdmterm list
-		   | TeSetComprehension of vdmterm * vdmterm list
+		   | TeSetComprehension of vdmterm * vdmterm list * vdmterm
 		   | TeInSet of vdmterm * vdmterm
 		   | TeInSetDom of vdmterm * vdmterm
 		   | TeInSetRng of vdmterm * vdmterm
@@ -61,6 +63,7 @@ type vdmterm_ast = TeBool of bool
 		   | TeMapEnum of (vdmterm * vdmterm) list
 
 		   | TeSeqEnum of vdmterm list
+		   | TeSeqComprehension of vdmterm * vdmterm list * vdmterm
 		   
 		   | TeIfte of vdmterm * vdmterm * vdmterm
 		   | TeLetIn of (vdmterm * vdmterm) list * vdmterm
@@ -88,5 +91,7 @@ type vdmtypedecl = TypeDecl of name * vdmtype * pos * (vdmterm * vdmterm * pos) 
 type vdmtermdecl = TeSignature of name * name list * vdmtype
 		   | TeDef of name * vdmterm list * vdmterm * vdmterm option * vdmterm option * name option
 
-type vdmmoduledecl = vdmtypedecl list * vdmtermdecl list
+type vdmvaluedecl = Value of vdmterm * vdmtype option * vdmterm
+
+type vdmmoduledecl = vdmtypedecl list * vdmtermdecl list * vdmvaluedecl list
 		      
