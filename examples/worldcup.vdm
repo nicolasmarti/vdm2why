@@ -169,7 +169,8 @@ promoted([sc1,sc2]^-) == mk_(sc1.team,sc2.team);
 group_winner : Group -> Team
 group_winner(g) ==
   cases g:
-    mk_SeqGroup(l) -> (hd l).team,
+    -- still do not understand why this one does not parse
+    -- mk_SeqGroup(l) -> (hd l).team,
     mk_SetGroup(s) -> let sc in set s be st
                         forall sc' in set s \ {sc} 
                           & sc.points >= sc'.points
@@ -198,9 +199,19 @@ winner_by_more_wins (scs) ==
 
 operations
 
-setup: () ==> ()
-setup () ==
-  gps := myGps;
+Win : Team * Team ==> ()
+Win (wt,lt) ==
+  let gp in set dom gps be st {wt,lt} subset {sc.team | sc in set gps(gp)}
+  in gps := gps ++ { gp |-> 
+                         { if sc.team = wt
+                           then mu(sc, won |-> sc.won + 1,
+                                       points |-> sc.points + 3)
+                           else if sc.team = lt
+                           then mu(sc, lost |-> sc.lost + 1)
+                           else sc 
+                                   | sc in set gps(gp)}}
+pre exists gp in set dom gps & {wt,lt} subset {sc.team | sc in set gps(gp)};
+
 
 resultsGroupA: () ==> ()
 resultsGroupA () ==
@@ -258,18 +269,11 @@ resultsGroupH () ==
    Win(<Argentina>,<Croatia>); Win(<Jamaica>,<Japan>);
   );
 
-Win : Team * Team ==> ()
-Win (wt,lt) ==
-  let gp in set dom gps be st {wt,lt} subset {sc.team | sc in set gps(gp)}
-  in gps := gps ++ { gp |-> 
-                         { if sc.team = wt
-                           then mu(sc, won |-> sc.won + 1,
-                                       points |-> sc.points + 3)
-                           else if sc.team = lt
-                           then mu(sc, lost |-> sc.lost + 1)
-                           else sc 
-                                   | sc in set gps(gp)}}
-pre exists gp in set dom gps & {wt,lt} subset {sc.team | sc in set gps(gp)};
+
+setup: () ==> ()
+setup () ==
+  gps := myGps;
+
 
 Win2 (wt,lt: Team)
 ext wr gps : map GroupName to set of Score

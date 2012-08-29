@@ -25,6 +25,9 @@ type vdmtype = TyBool
 	       | TyOption of vdmtype
 	       | TyUnion of vdmtype list
 	       | TyFct of vdmtype * bool * vdmtype
+	       | TyOp of vdmtype * vdmtype
+
+	       | TyUnit
 
 
 type vdmterm_ast = TeBool of bool
@@ -55,7 +58,7 @@ type vdmterm_ast = TeBool of bool
 		   | TeFieldAccess of vdmterm * name
 
 		   | TeSetEnum of vdmterm list
-		   | TeSetComprehension of vdmterm * vdmterm list * vdmterm
+		   | TeSetComprehension of vdmterm * vdmterm list * vdmterm option
 		   | TeInSet of vdmterm * vdmterm
 		   | TeInSetDom of vdmterm * vdmterm
 		   | TeInSetRng of vdmterm * vdmterm
@@ -63,7 +66,7 @@ type vdmterm_ast = TeBool of bool
 		   | TeMapEnum of (vdmterm * vdmterm) list
 
 		   | TeSeqEnum of vdmterm list
-		   | TeSeqComprehension of vdmterm * vdmterm list * vdmterm
+		   | TeSeqComprehension of vdmterm * vdmterm list * vdmterm option
 		   
 		   | TeIfte of vdmterm * vdmterm * vdmterm
 		   | TeLetIn of (vdmterm * vdmterm) list * vdmterm
@@ -93,5 +96,7 @@ type vdmtermdecl = TeSignature of name * name list * vdmtype
 
 type vdmvaluedecl = Value of vdmterm * vdmtype option * vdmterm
 
-type vdmmoduledecl = vdmtypedecl list * vdmtermdecl list * vdmvaluedecl list
+type vdmstatedecl = State of name * ((name * bool) option * vdmtype) list * (vdmterm * vdmterm * pos) option * (vdmterm * vdmterm * pos) option
+
+type vdmmoduledecl = vdmtypedecl list * vdmtermdecl list * vdmvaluedecl list * vdmstatedecl list
 		      

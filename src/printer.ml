@@ -105,7 +105,10 @@ let rec vdmterm2token (te: vdmterm) (p: place) : token =
 		List.map (fun te -> vdmterm2token te InArg) tes
 	       )
 	      ) @
-	      [Space 1; Verbatim "&"; Space 1; vdmterm2token te' Alone; Space 1; Verbatim "}"]
+	      (match te' with
+		| None -> []
+		| Some te' -> [Space 1; Verbatim "&"; Space 1; vdmterm2token te' Alone; Space 1]
+	      ) @ [Verbatim "}"]
       )
     | TeSeqComprehension (te, tes, te') -> 
       Box ([Verbatim "["; Space 1; vdmterm2token te Alone; Space 1; Verbatim "|"; Space 1] @
@@ -113,7 +116,10 @@ let rec vdmterm2token (te: vdmterm) (p: place) : token =
 		List.map (fun te -> vdmterm2token te InArg) tes
 	       )
 	      ) @
-	      [Space 1; Verbatim "&"; Space 1; vdmterm2token te' Alone; Space 1; Verbatim "]"]
+	      (match te' with
+		| None -> []
+		| Some te' -> [Space 1; Verbatim "&"; Space 1; vdmterm2token te' Alone; Space 1]
+	      ) @ [Verbatim "]"]
       )
     | TeSeqEnum tes -> 
       Box ([Verbatim "["] @
@@ -315,7 +321,7 @@ let rec vdmtermdecl2token (decl: vdmtermdecl) : token =
 
 
 let rec vdmmoduledecl2token (m: vdmmoduledecl) : token =
-  let tys, tes, _ = m in
+  let tys, tes, _, _ = m in
   Box [
     Verbatim "types"; Newline; Newline;
     IBox (intercalate Newline (List.map vdmtypedecl2token tys)); Newline; Newline;
