@@ -64,6 +64,7 @@ type vdmterm_ast = TeBool of bool
 		   | TeInSetRng of vdmterm * vdmterm
 
 		   | TeMapEnum of (vdmterm * vdmterm) list
+		   | TeMapComprehension of vdmterm * vdmterm * vdmterm list * vdmterm option
 
 		   | TeSeqEnum of vdmterm list
 		   | TeSeqComprehension of vdmterm * vdmterm list * vdmterm option
@@ -88,6 +89,24 @@ and vdmterm = {
 let build_term ?(pos: pos = nopos) (a: vdmterm_ast) : vdmterm =
   { ast = a; type_ = None; pos = pos }
 
+type vdmstmt = {
+  sast: vdmstmt_ast;
+  stype_: vdmtype option;
+  spos: pos;
+}
+and vdmstmt_ast = StmtSeq of vdmstmt * vdmstmt
+		  | StmtAssign of vdmterm * vdmterm
+		  | StmtLetIn of (vdmterm * vdmterm) list * vdmstmt
+		  | StmtLetInSt of vdmterm * vdmterm * vdmstmt
+		  | StmtApp of name * vdmterm list
+		  | StmtDef of (vdmterm * vdmterm) list * vdmstmt
+		  | StmtReturn of vdmterm
+		  | StmtIfte of (vdmterm * vdmstmt) list * vdmstmt
+		  | StmtDcl of (vdmterm * vdmterm) list * vdmstmt
+		  | StmtCase of vdmterm * (vdmterm list * vdmstmt) list
+
+let build_stmt ?(pos: pos = nopos) (a: vdmstmt_ast) : vdmstmt =
+  { sast = a; stype_ = None; spos = pos }
 
 type vdmtypedecl = TypeDecl of name * vdmtype * pos * (vdmterm * vdmterm * pos) option
 

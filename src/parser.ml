@@ -49,9 +49,10 @@ let keywords = ["true"; "false"; "not"; "and"; "or";
 		"inv"; "set"; "of"; "seq"; "seq1"; "map"; 
 		"to"; "inmap"; "compose"; "token"; "mk_token"; "len";
 		"types"; "functions"; "elems"; "inds";
-		"if"; "then"; "else"; "in"; "let"; "union"; "subset"; "hd";
+		"if"; "then"; "else"; "elif"; "in"; "let"; "union"; "subset"; "hd";
 		"be"; "st"; "dom"; "rng"; "iota"; "forall"; "exists"; "exists1"; "state";
-		"card"
+		"card"; "pre"; "post"; "ext"; "init"; "return"; "def";
+		"dcl"
 	       ]
 
 let parse_keywords : unit parsingrule =
@@ -132,9 +133,8 @@ Hashtbl.add infixes ">" (200, RightAssoc, fun pos x y -> build_term ~pos:pos (Te
 Hashtbl.add infixes "=" (200, NoAssoc, fun pos x y -> build_term ~pos:pos (TeInfix ("=", x, y)));;
 Hashtbl.add infixes "<>" (200, NoAssoc, fun pos x y -> build_term ~pos:pos (TeInfix ("<>", x, y)));;
 
-Hashtbl.add infixes ":=" (70, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix (":=", x, y)));;
-(*Hashtbl.add infixes ";" (60, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix (";", x, y)));;*)
 
+Hashtbl.add postfixes "~" (310, fun pos x -> build_term ~pos:pos (TePrefix ("~", x)));;
 
 
 (* the type parser *)
@@ -406,7 +406,13 @@ end pb
 let rec parse_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmterm = begin 
   error (
     tryrule parse_op_term
-    <|> tryrule (fun pb -> 
+    <|> tryrule (parse_term_typed_term ~leftmost:leftmost)
+  ) "not a valid term"
+end pb
+
+and parse_term_typed_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmterm = begin 
+  error (
+    tryrule (fun pb -> 
       let te = parse_term_lvl1 ~leftmost:leftmost pb in
       let () = whitespaces pb in
       let ty = mayberule (fun pb ->
@@ -418,6 +424,7 @@ let rec parse_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmterm 
       ) pb in
       {te with type_ = ty}
     )
+    <|> parse_term_lvl1
   ) "not a valid term"
 end pb
 
@@ -655,6 +662,40 @@ and parse_basic_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmter
     let () = whitespaces pb in
     build_term ~pos:(startpos, endpos) (TeSetComprehension (pat, preds, te))
   )
+  (* comprehension map *)
+  <|> tryrule (fun pb ->
+    let () = whitespaces pb in
+    let startpos = cur_pos pb in
+    let _ = after_start_pos leftmost (word "{") pb in
+    let () = whitespaces pb in
+    let pat1 = parse_basic_term ~leftmost:leftmost pb in
+    let () = whitespaces pb in
+    let _ = after_start_pos leftmost (word "|->") pb in
+    let () = whitespaces pb in
+    let pat2 = parse_term ~leftmost:leftmost pb in
+    let () = whitespaces pb in
+    let _ = after_start_pos leftmost (word "|") pb in
+    let () = whitespaces pb in
+    let preds = separatedBy (parse_term ~leftmost:leftmost) 
+      (fun pb ->
+	let () = whitespaces pb in
+	let () = after_start_pos leftmost (word ",") pb in
+	let () = whitespaces pb in
+	()
+      ) pb in
+    let () = whitespaces pb in
+    let te = mayberule (fun pb ->
+      let _ = after_start_pos leftmost (word "&") pb in
+      let () = whitespaces pb in
+      let te = parse_term ~leftmost:leftmost pb in
+      let () = whitespaces pb in
+      te
+    ) pb in
+    let _ = after_start_pos leftmost (word "}") pb in
+    let endpos = cur_pos pb in
+    let () = whitespaces pb in
+    build_term ~pos:(startpos, endpos) (TeMapComprehension (pat1, pat2, preds, te))
+  )
   (* enumeration list *)
   <|> tryrule (fun pb ->
     let () = whitespaces pb in
@@ -681,7 +722,7 @@ and parse_basic_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmter
     let _ = after_start_pos leftmost (word "{") pb in
     let () = whitespaces pb in
     let tes = separatedBy (fun pb ->
-      let te1 = parse_term ~leftmost:leftmost pb in
+      let te1 = parse_basic_term ~leftmost:leftmost pb in
       let () = whitespaces pb in
       let () = after_start_pos leftmost (word "|->") pb in
       let () = whitespaces pb in
@@ -966,6 +1007,252 @@ and parse_op_term (pb: parserbuffer) : vdmterm = begin
   opparse parse_vdmop
 end pb
 
+let rec parse_stmt ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmstmt = begin 
+  error (
+    tryrule (fun pb ->
+      let () = whitespaces pb in
+      let startpos = cur_pos pb in
+      let st1 = parse_stmt_lvl1 ~leftmost:leftmost pb in
+      let () = whitespaces pb in
+      let () = word ";" pb in
+      let () = whitespaces pb in
+      let st2 = mayberule (parse_stmt ~leftmost:leftmost) pb in
+      let endpos = cur_pos pb in
+      let () = whitespaces pb in
+      match st2 with
+	| None -> st1
+	| Some st2 ->
+	  build_stmt ~pos:(startpos, endpos) (StmtSeq (st1, st2))
+    )
+    <|> parse_stmt_lvl1 ~leftmost:leftmost
+  ) "not a valid statement"
+end pb
+and parse_stmt_lvl1 ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmstmt = begin 
+  error (
+   (* let in *)
+    tryrule (fun pb ->
+      let () = whitespaces pb in
+      let startpos = cur_pos pb in
+      let () = after_start_pos leftmost (word "let") pb in
+      let () = whitespaces pb in
+      let tes = separatedBy (fun pb ->
+	let () = whitespaces pb in
+	let te1 = parse_basic_term ~leftmost:leftmost pb in
+	let () = whitespaces pb in
+	let () = after_start_pos leftmost (word "=") pb in
+	let () = whitespaces pb in
+	let te2 = parse_term ~leftmost:leftmost pb in
+	let () = whitespaces pb in
+	te1, te2
+      ) (fun pb ->
+	let () = whitespaces pb in
+	let () = after_start_pos leftmost (word ",") pb in
+	let () = whitespaces pb in
+	()
+    ) pb in
+      let () = whitespaces pb in
+      let () = after_start_pos leftmost (word "in") pb in
+      let () = whitespaces pb in
+      let te3 = (parse_stmt ~leftmost:leftmost <!> "invalid let-in body") pb in
+      let endpos = cur_pos pb in
+      let () = whitespaces pb in
+      build_stmt ~pos:(startpos, endpos) (StmtLetIn (tes, te3))
+    )
+   (* def *)
+   <|> tryrule (fun pb ->
+      let () = whitespaces pb in
+      let startpos = cur_pos pb in
+      let () = after_start_pos leftmost (word "def") pb in
+      let () = whitespaces pb in
+      let tes = separatedBy (fun pb ->
+	let () = whitespaces pb in
+	let te1 = parse_basic_term ~leftmost:leftmost pb in
+	let () = whitespaces pb in
+	let () = after_start_pos leftmost (word "=") pb in
+	let () = whitespaces pb in
+	let te2 = parse_term ~leftmost:leftmost pb in
+	let () = whitespaces pb in
+	te1, te2
+      ) (fun pb ->
+	let () = whitespaces pb in
+	let () = after_start_pos leftmost (word ";") pb in
+	let () = whitespaces pb in
+	()
+    ) pb in
+      let () = whitespaces pb in
+      let () = after_start_pos leftmost (word "in") pb in
+      let () = whitespaces pb in
+      let te3 = (parse_stmt ~leftmost:leftmost <!> "invalid let-in body") pb in
+      let endpos = cur_pos pb in
+      let () = whitespaces pb in
+      build_stmt ~pos:(startpos, endpos) (StmtDef (tes, te3))
+    )
+   (* dcl *)
+   <|> tryrule (fun pb ->
+      let () = whitespaces pb in
+      let startpos = cur_pos pb in
+      let () = after_start_pos leftmost (word "dcl") pb in
+      let () = whitespaces pb in
+      let tes = separatedBy (fun pb ->
+	let () = whitespaces pb in
+	let te1 = parse_basic_term ~leftmost:leftmost pb in
+	let () = whitespaces pb in
+	let () = after_start_pos leftmost (word ":=") pb in
+	let () = whitespaces pb in
+	let te2 = parse_term ~leftmost:leftmost pb in
+	let () = whitespaces pb in
+	te1, te2
+      ) (fun pb ->
+	let () = whitespaces pb in
+	let () = after_start_pos leftmost (word ";") pb in
+	let () = whitespaces pb in
+	()
+    ) pb in
+      let () = whitespaces pb in
+      let () = after_start_pos leftmost (word ";") pb in
+      let () = whitespaces pb in
+      let te3 = (parse_stmt ~leftmost:leftmost <!> "invalid let-in body") pb in
+      let endpos = cur_pos pb in
+      let () = whitespaces pb in
+      build_stmt ~pos:(startpos, endpos) (StmtDcl (tes, te3))
+    )
+    (* let st in *)
+    <|> tryrule (fun pb ->
+      let () = whitespaces pb in
+      let startpos = cur_pos pb in
+      let () = after_start_pos leftmost (word "let") pb in
+      let () = whitespaces pb in
+      let te1 = parse_term ~leftmost:leftmost pb in
+      let () = whitespaces pb in
+      let () = after_start_pos leftmost (word "be") pb in
+      let () = whitespaces pb in
+      let () = after_start_pos leftmost (word "st") pb in
+      let () = whitespaces pb in
+      let te2 = (parse_term ~leftmost:leftmost <!> "invalid let-st-in condition") pb in
+      let () = whitespaces pb in
+      let () = after_start_pos leftmost (word "in") pb in
+      let () = whitespaces pb in
+      let te3 = (parse_stmt ~leftmost:leftmost <!> "invalid let-st-in body") pb in
+      let endpos = cur_pos pb in
+      let () = whitespaces pb in
+      build_stmt ~pos:(startpos, endpos) (StmtLetInSt (te1, te2, te3))
+    )
+    (* assign *)
+    <|> tryrule (fun pb ->
+      let () = whitespaces pb in
+      let startpos = cur_pos pb in
+      let te1 = parse_term ~leftmost:leftmost pb in
+      let () = whitespaces pb in
+      let () = after_start_pos leftmost (word ":=") pb in
+      let () = whitespaces pb in
+      let te2 = (parse_term ~leftmost:leftmost <!> "invalid let-st-in condition") pb in
+      let endpos = cur_pos pb in
+      let () = whitespaces pb in
+      build_stmt ~pos:(startpos, endpos) (StmtAssign (te1, te2))
+    )
+    (* function call *)
+    <|> tryrule (fun pb ->
+      let () = whitespaces pb in
+      let startpos = cur_pos pb in
+      let n = after_start_pos leftmost parse_name pb in
+      let () = whitespaces pb in
+      let () = after_start_pos leftmost (word "(") pb in
+      let () = whitespaces pb in
+      let args = separatedBy (parse_term ~leftmost:leftmost) 
+	(fun pb ->
+	  let () = whitespaces pb in
+	  let () = after_start_pos leftmost (word ",") pb in
+	  let () = whitespaces pb in
+	  ()
+	) pb in
+      let () = whitespaces pb in
+      let () = after_start_pos leftmost (word ")") pb in
+      let endpos = cur_pos pb in
+      let () = whitespaces pb in
+      build_stmt ~pos:(startpos, endpos) (StmtApp (n, args))
+    )
+    (* function call *)
+    <|> tryrule (fun pb ->
+      let () = whitespaces pb in
+      let startpos = cur_pos pb in
+      let () = after_start_pos leftmost (word "return") pb in
+      let () = whitespaces pb in
+      let te = parse_term ~leftmost:leftmost pb in
+      let endpos = cur_pos pb in
+      let () = whitespaces pb in
+      build_stmt ~pos:(startpos, endpos) (StmtReturn te)
+    )
+    (* ifte *)
+    <|> tryrule (fun pb ->
+      let () = whitespaces pb in
+      let startpos = cur_pos pb in
+      let () = after_start_pos leftmost (word "if") pb in
+      let () = whitespaces pb in
+      let tes = separatedBy (fun pb ->
+	let () = whitespaces pb in	
+	let te1 = parse_term ~leftmost:leftmost pb in
+	let () = whitespaces pb in
+	let () = after_start_pos leftmost (word "then") pb in
+	let () = whitespaces pb in
+	let te2 = parse_stmt ~leftmost:leftmost pb in
+	let () = whitespaces pb in
+	(te1, te2)
+      )
+	(fun pb ->
+	  let () = whitespaces pb in
+	  let () = after_start_pos leftmost (word "elif") pb in
+	  let () = whitespaces pb in
+	  ()
+	) pb in
+      let () = after_start_pos leftmost (word "else") pb in
+      let () = whitespaces pb in
+      let te3 = parse_stmt ~leftmost:leftmost pb in
+      let endpos = cur_pos pb in
+      let () = whitespaces pb in
+      build_stmt ~pos:(startpos, endpos) (StmtIfte (tes, te3))
+    )
+  (* case *)
+  <|> tryrule (fun pb ->
+    let () = whitespaces pb in
+    let startpos = cur_pos pb in
+    let () = after_start_pos leftmost (word "cases") pb in
+    let () = whitespaces pb in
+    let te = parse_term ~leftmost:leftmost pb in
+    let () = whitespaces pb in
+    let () = after_start_pos leftmost (word ":") pb in
+    let () = whitespaces pb in
+    let cases = (separatedBy (fun pb ->
+      let patterns = (separatedBy 
+			(parse_term ~leftmost:leftmost)
+			(fun pb ->
+			  let () = whitespaces pb in
+			  let () = after_start_pos leftmost (word ",") pb in
+			  let () = whitespaces pb in
+			  ()
+			) <!> "incorrect patterns") pb in
+
+      let () = whitespaces pb in
+      let () = after_start_pos leftmost (word "->") pb in
+      let () = whitespaces pb in
+      let st = parse_stmt ~leftmost:leftmost pb in
+      let () = whitespaces pb in
+      patterns, st
+    ) (fun pb ->
+	let () = whitespaces pb in
+	let () = after_start_pos leftmost (word ",") pb in
+	let () = whitespaces pb in
+	()
+    ) <!> "incorrect destructors") pb in
+    let () = whitespaces pb in
+    let () = after_start_pos leftmost (word "end") pb in
+    let endpos = cur_pos pb in
+    let () = whitespaces pb in
+    build_stmt ~pos:(startpos, endpos) (StmtCase (te, cases))
+  )
+    <|> tryrule (paren (fun pb -> parse_stmt ~leftmost:leftmost pb))
+  ) "not a valid statement"
+end pb
+
 let parse_type_decl (pb: parserbuffer) : vdmtypedecl = begin
   error (
   tryrule (fun pb ->
@@ -1166,14 +1453,31 @@ let parse_operations_decl (pb: parserbuffer) : unit = begin
     let _ = (n, ty) in
     ()
   )
-  (* Definition *)
+  (* Implicit/Explicit Definition *)
   <|> tryrule (fun pb ->
     let startpos = cur_pos pb in
     let n = parse_name pb in
     let () = whitespaces pb in
     let _ = after_start_pos startpos (word "(") pb in
     let () = whitespaces pb in
-    let args = separatedBy (parse_term ~leftmost:startpos)
+    let args = separatedBy 
+      (fun pb -> 
+	let te = parse_term pb in
+	let () = whitespaces pb in
+
+	let ty = mayberule (fun pb ->
+	  let _ = word ":" pb in
+	  let () = whitespaces pb in
+	  let ty = parse_type pb in
+	  let () = whitespaces pb in
+	  ty
+	) pb in
+
+	match ty with
+	  | None -> te
+	  | Some _ -> {te with type_ = ty }
+
+      )
       (fun pb ->
 	let () = whitespaces pb in
 	let () = after_start_pos startpos (word ",") pb in
@@ -1183,14 +1487,68 @@ let parse_operations_decl (pb: parserbuffer) : unit = begin
     let () = whitespaces pb in
     let _ = after_start_pos startpos (word ")") pb in
     let () = whitespaces pb in
-    let _ = after_start_pos startpos (word "==") pb in
-    let () = whitespaces pb in
-    let body = parse_term ~leftmost:startpos pb in
-    let () = whitespaces pb in
+
+    let idty = mayberule (
+      separatedBy (fun pb ->
+	let () = whitespaces pb in
+	let n = after_start_pos startpos parse_name pb in
+	let () = whitespaces pb in
+	let () = after_start_pos startpos (word ":") pb in
+	let () = whitespaces pb in
+	let ty = parse_type ~leftmost:startpos pb in
+	let () = whitespaces pb in
+	(n, ty)
+	  
+      )
+	(fun pb ->
+	  let () = whitespaces pb in
+	  let () = after_start_pos startpos (word "*") pb in
+	  let () = whitespaces pb in
+	  ()
+	)
+      ) pb in
+
+
+    let body = mayberule (fun pb ->
+      let _ = after_start_pos startpos (word "==") pb in
+      let () = whitespaces pb in
+      let body = parse_stmt ~leftmost:startpos pb in
+      let () = whitespaces pb in
+      body
+    ) pb in
+
     let _ = mayberule (word ";") pb in
     let () = whitespaces pb in
 
-    let ext = () in
+    let ext = mayberule (fun pb ->
+      let startpos = cur_pos pb in
+      let _ = word "ext" pb in
+      printf "caca1\n";
+      let () = whitespaces pb in
+      let mode = (tryrule (fun pb -> after_start_pos startpos (word "wr") pb; false) <|> tryrule (fun pb -> after_start_pos startpos (word "rd") pb; true)) pb in
+      let () = whitespaces pb in
+      printf "caca2\n";
+      let vars = separatedBy (parse_name) 
+      (fun pb ->
+	let () = whitespaces pb in
+	let () = after_start_pos startpos (word ",") pb in
+	let () = whitespaces pb in
+	()
+      ) pb in
+      printf "caca3\n";
+      let () = whitespaces pb in
+      let ty = mayberule (fun pb ->
+	let () = whitespaces pb in
+	let () = after_start_pos startpos (word ":") pb in
+	let () = whitespaces pb in
+	let ty = parse_type ~leftmost:startpos pb in
+	ty
+      ) pb in
+      printf "caca4\n";
+      let () = whitespaces pb in
+      (mode, vars, ty)
+
+    ) in
 
     let pre = mayberule (fun pb -> 
       let startpos = cur_pos pb in
@@ -1214,7 +1572,7 @@ let parse_operations_decl (pb: parserbuffer) : unit = begin
 
     let except = () in
 
-    let _ = (n, args, body, ext, pre, post, except) in
+    let _ = (n, args, idty, body, ext, pre, post, except) in
     ()
   )
   ) "not a valide operations declaration"
