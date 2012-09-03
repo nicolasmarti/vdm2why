@@ -1,6 +1,5 @@
 open Def
 open Libparser
-
 open Str
 open Printf
 
@@ -51,8 +50,8 @@ let keywords = ["true"; "false"; "not"; "and"; "or";
 		"types"; "functions"; "elems"; "inds";
 		"if"; "then"; "else"; "elif"; "in"; "let"; "union"; "subset"; "hd";
 		"be"; "st"; "dom"; "rng"; "iota"; "forall"; "exists"; "exists1"; "state";
-		"card"; "pre"; "post"; "ext"; "init"; "return"; "def";
-		"dcl"
+		"card"; "pre"; "post"; "ext"; "init"; "return"; "def"; 
+		"dcl"; "for"; "all"; "do"
 	       ]
 
 let parse_keywords : unit parsingrule =
@@ -127,6 +126,8 @@ Hashtbl.add infixes ">=" (200, RightAssoc, fun pos x y -> build_term ~pos:pos (T
 Hashtbl.add infixes "<=" (200, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix ("<=", x, y)));;
 Hashtbl.add infixes "<" (200, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix ("<", x, y)));;
 Hashtbl.add infixes ">" (200, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix (">", x, y)));;
+
+Hashtbl.add infixes "." (400, RightAssoc, fun pos x y -> build_term ~pos:pos (TeInfix (".", x, y)));;
 
 (* this is a bit dangerous *)
 
@@ -391,7 +392,11 @@ and parse_type_lvl0 ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmtype
     TyName (n, pos)
   )
   (* with paren *)
-  <|> tryrule (paren (parse_type ~leftmost:leftmost))
+  <|> tryrule (paren (fun pb ->
+    let te = parse_type ~leftmost:leftmost pb in
+    te
+  )
+  )
   (* unit *)
   <|> tryrule (fun pb ->
     let () = whitespaces pb in
@@ -406,7 +411,7 @@ end pb
 let rec parse_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmterm = begin 
   error (
     tryrule parse_op_term
-    <|> tryrule (parse_term_typed_term ~leftmost:leftmost)
+    <|> parse_term_lvl1
   ) "not a valid term"
 end pb
 
@@ -424,7 +429,7 @@ and parse_term_typed_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : v
       ) pb in
       {te with type_ = ty}
     )
-    <|> parse_term_lvl1
+    (*<|> parse_term_lvl1*)
   ) "not a valid term"
 end pb
 
@@ -434,7 +439,7 @@ and parse_term_lvl1 ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmterm
   tryrule (fun pb ->
     let () = whitespaces pb in
     let startpos = cur_pos pb in
-    let te = parse_basic_term ~leftmost:leftmost pb in
+    let te = (tryrule (paren (parse_term ~leftmost:leftmost)) <|> tryrule (parse_basic_term ~leftmost:leftmost)) pb in
     (tryrule (fun pb ->
       let _ = after_start_pos leftmost (word ".") pb in
       let n = after_start_pos leftmost parse_name pb in
@@ -491,16 +496,7 @@ and parse_term_lvl1 ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmterm
      <|> (fun pb -> te)
      ) pb
   )
-  (*
-  (* paren *)
-  <|> tryrule (fun pb ->
-    let () = whitespaces pb in
-    let te = paren (parse_term ~leftmost:leftmost) pb in
-    let () = whitespaces pb in
-    te
-  )
-  *)
-  ) "not a valid term"
+  ) "not a valid term (lvl1)"
 end pb
 
 and parse_basic_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmterm = begin 
@@ -676,7 +672,19 @@ and parse_basic_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmter
     let () = whitespaces pb in
     let _ = after_start_pos leftmost (word "|") pb in
     let () = whitespaces pb in
-    let preds = separatedBy (parse_term ~leftmost:leftmost) 
+    let preds = separatedBy (fun pb ->
+      let te = parse_term ~leftmost:leftmost pb in
+      let ty = mayberule (fun pb ->
+	let _ = after_start_pos leftmost (word ":") pb in
+	let () = whitespaces pb in
+	let ty = parse_type ~leftmost:leftmost pb in
+	let () = whitespaces pb in
+	ty
+      ) pb in
+      match ty with
+	| None -> te
+	| _ -> { te with type_ = ty }
+    ) 
       (fun pb ->
 	let () = whitespaces pb in
 	let () = after_start_pos leftmost (word ",") pb in
@@ -788,7 +796,7 @@ and parse_basic_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmter
     let () = whitespaces pb in
     let tes = separatedBy (fun pb ->
       let () = whitespaces pb in
-      let te1 = parse_basic_term ~leftmost:leftmost pb in
+      let te1 = parse_term_lvl1 ~leftmost:leftmost pb in
       let () = whitespaces pb in
       let () = after_start_pos leftmost (word "=") pb in
       let () = whitespaces pb in
@@ -815,7 +823,7 @@ and parse_basic_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmter
     let startpos = cur_pos pb in
     let () = after_start_pos leftmost (word "let") pb in
     let () = whitespaces pb in
-    let te1 = parse_term ~leftmost:leftmost pb in
+    let te1 = parse_term_lvl1 ~leftmost:leftmost pb in
     let () = whitespaces pb in
     let () = after_start_pos leftmost (word "be") pb in
     let () = whitespaces pb in
@@ -992,7 +1000,7 @@ and parse_basic_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmter
     let () = whitespaces pb in
     te
   )
-  ) "not a valid term"
+  ) "not a valid term (basic)"
 end pb
 
 and parse_vdmop: vdmterm opparser = {
@@ -1037,7 +1045,7 @@ and parse_stmt_lvl1 ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmstmt
       let () = whitespaces pb in
       let tes = separatedBy (fun pb ->
 	let () = whitespaces pb in
-	let te1 = parse_basic_term ~leftmost:leftmost pb in
+	let te1 = parse_term_lvl1 ~leftmost:leftmost pb in
 	let () = whitespaces pb in
 	let () = after_start_pos leftmost (word "=") pb in
 	let () = whitespaces pb in
@@ -1082,7 +1090,7 @@ and parse_stmt_lvl1 ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmstmt
       let () = whitespaces pb in
       let () = after_start_pos leftmost (word "in") pb in
       let () = whitespaces pb in
-      let te3 = (parse_stmt ~leftmost:leftmost <!> "invalid let-in body") pb in
+      let te3 = (parse_stmt ~leftmost:leftmost <!> "invalid def body") pb in
       let endpos = cur_pos pb in
       let () = whitespaces pb in
       build_stmt ~pos:(startpos, endpos) (StmtDef (tes, te3))
@@ -1097,11 +1105,18 @@ and parse_stmt_lvl1 ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmstmt
 	let () = whitespaces pb in
 	let te1 = parse_basic_term ~leftmost:leftmost pb in
 	let () = whitespaces pb in
+	let ty = mayberule (fun pb ->
+	  let _ = after_start_pos leftmost (word ":") pb in
+	  let () = whitespaces pb in
+	  let ty = parse_type ~leftmost:leftmost pb in
+	  let () = whitespaces pb in
+	  ty
+	) pb in
 	let () = after_start_pos leftmost (word ":=") pb in
 	let () = whitespaces pb in
 	let te2 = parse_term ~leftmost:leftmost pb in
 	let () = whitespaces pb in
-	te1, te2
+	{te1 with type_ = ty}, te2
       ) (fun pb ->
 	let () = whitespaces pb in
 	let () = after_start_pos leftmost (word ";") pb in
@@ -1111,7 +1126,7 @@ and parse_stmt_lvl1 ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmstmt
       let () = whitespaces pb in
       let () = after_start_pos leftmost (word ";") pb in
       let () = whitespaces pb in
-      let te3 = (parse_stmt ~leftmost:leftmost <!> "invalid let-in body") pb in
+      let te3 = (parse_stmt ~leftmost:leftmost <!> "invalid dcl body") pb in
       let endpos = cur_pos pb in
       let () = whitespaces pb in
       build_stmt ~pos:(startpos, endpos) (StmtDcl (tes, te3))
@@ -1122,7 +1137,7 @@ and parse_stmt_lvl1 ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmstmt
       let startpos = cur_pos pb in
       let () = after_start_pos leftmost (word "let") pb in
       let () = whitespaces pb in
-      let te1 = parse_term ~leftmost:leftmost pb in
+      let te1 = parse_term_lvl1 ~leftmost:leftmost pb in
       let () = whitespaces pb in
       let () = after_start_pos leftmost (word "be") pb in
       let () = whitespaces pb in
@@ -1210,6 +1225,24 @@ and parse_stmt_lvl1 ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmstmt
       let endpos = cur_pos pb in
       let () = whitespaces pb in
       build_stmt ~pos:(startpos, endpos) (StmtIfte (tes, te3))
+    )
+    (* forall *)
+    <|> tryrule (fun pb ->
+      let () = whitespaces pb in
+      let startpos = cur_pos pb in
+      let () = after_start_pos leftmost (word "for") pb in
+      let () = whitespaces pb in
+      let () = after_start_pos leftmost (word "all") pb in
+      let () = whitespaces pb in
+      let te1 = parse_term ~leftmost:leftmost pb in
+      let () = whitespaces pb in
+      let () = after_start_pos leftmost (word "do") pb in
+      let () = whitespaces pb in
+      let te2 = parse_stmt ~leftmost:leftmost pb in
+      let () = whitespaces pb in
+      let endpos = cur_pos pb in
+      let () = whitespaces pb in
+      build_stmt ~pos:(startpos, endpos) (StmtForall (te1, te2))
     )
   (* case *)
   <|> tryrule (fun pb ->
@@ -1502,7 +1535,7 @@ let parse_operations_decl (pb: parserbuffer) : unit = begin
       )
 	(fun pb ->
 	  let () = whitespaces pb in
-	  let () = after_start_pos startpos (word "*") pb in
+	  let () = after_start_pos startpos (word ",") pb in
 	  let () = whitespaces pb in
 	  ()
 	)
@@ -1510,6 +1543,7 @@ let parse_operations_decl (pb: parserbuffer) : unit = begin
 
 
     let body = mayberule (fun pb ->
+      let () = whitespaces pb in
       let _ = after_start_pos startpos (word "==") pb in
       let () = whitespaces pb in
       let body = parse_stmt ~leftmost:startpos pb in
@@ -1521,13 +1555,12 @@ let parse_operations_decl (pb: parserbuffer) : unit = begin
     let () = whitespaces pb in
 
     let ext = mayberule (fun pb ->
+      let () = whitespaces pb in
       let startpos = cur_pos pb in
       let _ = word "ext" pb in
-      printf "caca1\n";
       let () = whitespaces pb in
       let mode = (tryrule (fun pb -> after_start_pos startpos (word "wr") pb; false) <|> tryrule (fun pb -> after_start_pos startpos (word "rd") pb; true)) pb in
       let () = whitespaces pb in
-      printf "caca2\n";
       let vars = separatedBy (parse_name) 
       (fun pb ->
 	let () = whitespaces pb in
@@ -1535,7 +1568,6 @@ let parse_operations_decl (pb: parserbuffer) : unit = begin
 	let () = whitespaces pb in
 	()
       ) pb in
-      printf "caca3\n";
       let () = whitespaces pb in
       let ty = mayberule (fun pb ->
 	let () = whitespaces pb in
@@ -1544,11 +1576,10 @@ let parse_operations_decl (pb: parserbuffer) : unit = begin
 	let ty = parse_type ~leftmost:startpos pb in
 	ty
       ) pb in
-      printf "caca4\n";
       let () = whitespaces pb in
       (mode, vars, ty)
 
-    ) in
+    ) pb in
 
     let pre = mayberule (fun pb -> 
       let startpos = cur_pos pb in

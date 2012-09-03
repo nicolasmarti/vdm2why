@@ -104,6 +104,7 @@ and vdmstmt_ast = StmtSeq of vdmstmt * vdmstmt
 		  | StmtIfte of (vdmterm * vdmstmt) list * vdmstmt
 		  | StmtDcl of (vdmterm * vdmterm) list * vdmstmt
 		  | StmtCase of vdmterm * (vdmterm list * vdmstmt) list
+		  | StmtForall of vdmterm * vdmstmt
 
 let build_stmt ?(pos: pos = nopos) (a: vdmstmt_ast) : vdmstmt =
   { sast = a; stype_ = None; spos = pos }

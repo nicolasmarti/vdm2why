@@ -418,15 +418,19 @@ let (|>) v p = (parsecste v) >> p
 ;;
 
 let rec separatedBy (elem: 'a parsingrule) (sep: 'b parsingrule) (pb: parserbuffer) : 'a list =
+  let savebegin1 = pb.beginpointer in
   try (
     let hd = elem pb in
+    let savebegin = pb.beginpointer in
     let tl = try (
       let _ = sep pb in
       separatedBy elem sep pb
     ) with
-      | NoMatch -> [] in
+      | NoMatch -> 
+	pb.beginpointer <- savebegin;
+	[] in
     hd :: tl
-  ) with | NoMatch -> []
+  ) with | NoMatch -> pb.beginpointer <- savebegin1; []
 ;; 
 
 (*
