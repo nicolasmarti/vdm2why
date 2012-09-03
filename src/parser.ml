@@ -796,13 +796,9 @@ and parse_basic_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmter
     let () = whitespaces pb in
     let tes = separatedBy (fun pb ->
       let () = whitespaces pb in
-      let te1 = parse_term_lvl1 ~leftmost:leftmost pb in
+      let te1 = parse_term ~leftmost:leftmost pb in
       let () = whitespaces pb in
-      let () = after_start_pos leftmost (word "=") pb in
-      let () = whitespaces pb in
-      let te2 = parse_term ~leftmost:leftmost pb in
-      let () = whitespaces pb in
-      te1, te2
+      te1
     ) (fun pb ->
 	let () = whitespaces pb in
 	let () = after_start_pos leftmost (word ",") pb in
@@ -1119,7 +1115,7 @@ and parse_stmt_lvl1 ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmstmt
 	{te1 with type_ = ty}, te2
       ) (fun pb ->
 	let () = whitespaces pb in
-	let () = after_start_pos leftmost (word ";") pb in
+	let () = after_start_pos leftmost (word ",") pb in
 	let () = whitespaces pb in
 	()
     ) pb in

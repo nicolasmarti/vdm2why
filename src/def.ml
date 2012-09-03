@@ -70,7 +70,7 @@ type vdmterm_ast = TeBool of bool
 		   | TeSeqComprehension of vdmterm * vdmterm list * vdmterm option
 		   
 		   | TeIfte of vdmterm * vdmterm * vdmterm
-		   | TeLetIn of (vdmterm * vdmterm) list * vdmterm
+		   | TeLetIn of vdmterm list * vdmterm
 		   | TeLetInSt of vdmterm * vdmterm * vdmterm
 
 		   | TeIota of vdmterm * vdmterm

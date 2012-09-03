@@ -149,7 +149,7 @@ let rec vdmterm2token (te: vdmterm) (p: place) : token =
     | TeLetIn (cases, te3) -> 
       Box [Verbatim "let"; Space 1;
 	   Box (intercalate Newline (
-	     List.map (fun (te1, te2) -> Box [vdmterm2token te1 Alone; Space 1; Verbatim "="; Space 1; vdmterm2token te2 Alone]) cases
+	     List.map (fun (te1) -> Box [vdmterm2token te1 Alone]) cases
 	   )
 	   ); Space 1; Verbatim "in"; Space 1;
 	   vdmterm2token te3 Alone
@@ -318,13 +318,28 @@ let rec vdmtermdecl2token (decl: vdmtermdecl) : token =
 	      )
       )
 
-
+let rec vdmstatedecl2token (st: vdmstatedecl) : token =
+  let State (n, fields, inv, init) = st in
+  IBox ([Verbatim n; Space 1; Verbatim "of"; Space 1] @
+	   [IBox (intercalate Newline (List.map ( fun field ->
+	     Box (
+	       (match fst field with
+		 | None -> []
+		 | Some (n, true) -> [Verbatim n; Space 1; Verbatim ":"; Space 1]
+		 | Some (n, false) -> [Verbatim n; Space 1; Verbatim ":-"; Space 1]
+	       ) @
+		 [vdmtype2token (snd field); Newline]
+	     )
+	   ) fields))])
+  
 
 let rec vdmmoduledecl2token (m: vdmmoduledecl) : token =
-  let tys, tes, _, _ = m in
+  let tys, tes, _, sts = m in
   Box [
-    Verbatim "types"; Newline; Newline;
+    Verbatim "types\n"; Newline; Newline;
     IBox (intercalate Newline (List.map vdmtypedecl2token tys)); Newline; Newline;
-    Verbatim "functions"; Newline; Newline;
+    Verbatim "\nfunctions\n"; Newline; Newline;
     IBox (intercalate Newline (List.map vdmtermdecl2token tes)); Newline;
+    Verbatim "\nstate\n"; Newline; Newline;
+    IBox (intercalate Newline (List.map vdmstatedecl2token sts)); Newline;
   ]
