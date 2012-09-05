@@ -334,7 +334,7 @@ let rec vdmstatedecl2token (st: vdmstatedecl) : token =
   
 
 let rec vdmmoduledecl2token (m: vdmmoduledecl) : token =
-  let tys, tes, _, sts = m in
+  let tys, tes, _, sts, _ = m in
   Box [
     Verbatim "types\n"; Newline; Newline;
     IBox (intercalate Newline (List.map vdmtypedecl2token tys)); Newline; Newline;

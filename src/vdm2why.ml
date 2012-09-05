@@ -17,9 +17,9 @@ let main () =
   let pb = build_parserbuffer stream in
   try 
     let decls = (many parse_module_decl) pb in
-    let m = List.fold_right (fun (hd1, hd2, hd3, hd4) (tys, tes, vals, states) ->
-      (hd1 @ tys), (hd2 @ tes), (hd3 @ vals), (hd4 @ states)     
-    ) decls ([], [], [], []) in
+    let m = List.fold_right (fun (hd1, hd2, hd3, hd4, hd5) (tys, tes, vals, states, ops) ->
+      (hd1 @ tys), (hd2 @ tes), (hd3 @ vals), (hd4 @ states), (hd5 @ ops)     
+    ) decls ([], [], [], [], []) in
     let _ = whitespaces pb in
     let _ = eos pb in
     let token = vdmmoduledecl2token m in

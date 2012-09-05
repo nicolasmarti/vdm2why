@@ -118,5 +118,8 @@ type vdmvaluedecl = Value of vdmterm * vdmtype option * vdmterm
 
 type vdmstatedecl = State of name * ((name * bool) option * vdmtype) list * (vdmterm * vdmterm * pos) option * (vdmterm * vdmterm * pos) option
 
-type vdmmoduledecl = vdmtypedecl list * vdmtermdecl list * vdmvaluedecl list * vdmstatedecl list
+type vdmoperationdecl = Operation of name * vdmterm list * ((name * vdmtype) list) option * vdmstmt option * (bool * name list * vdmtype option) option * vdmterm option * vdmterm option * unit
+			| OpSig of name * vdmtype
+
+type vdmmoduledecl = vdmtypedecl list * vdmtermdecl list * vdmvaluedecl list * vdmstatedecl list * vdmoperationdecl list
 		      

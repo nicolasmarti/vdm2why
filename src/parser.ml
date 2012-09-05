@@ -1466,7 +1466,7 @@ let parse_value_decl (pb: parserbuffer) : vdmvaluedecl = begin
     ) "not a valid value"
 end pb
 
-let parse_operations_decl (pb: parserbuffer) : unit = begin
+let parse_operations_decl (pb: parserbuffer) : vdmoperationdecl = begin
   error (
   (* Signature *)
   tryrule (fun pb ->
@@ -1479,8 +1479,7 @@ let parse_operations_decl (pb: parserbuffer) : unit = begin
     let () = whitespaces pb in
     let _ = mayberule (word ";") pb in
     let () = whitespaces pb in
-    let _ = (n, ty) in
-    ()
+    OpSig (n, ty)
   )
   (* Implicit/Explicit Definition *)
   <|> tryrule (fun pb ->
@@ -1599,8 +1598,7 @@ let parse_operations_decl (pb: parserbuffer) : unit = begin
 
     let except = () in
 
-    let _ = (n, args, idty, body, ext, pre, post, except) in
-    ()
+    Operation (n, args, idty, body, ext, pre, post, except)
   )
   ) "not a valide operations declaration"
 end pb
@@ -1614,7 +1612,7 @@ let parse_module_decl (pb: parserbuffer) : vdmmoduledecl = begin
     let () = word "types" pb in
     let () = whitespaces pb in
     let tys = many parse_type_decl pb in
-    (tys, [], [], [])
+    (tys, [], [], [], [])
   )
   (* parse functions *)
   <|> tryrule (fun pb ->
@@ -1622,7 +1620,7 @@ let parse_module_decl (pb: parserbuffer) : vdmmoduledecl = begin
     let () = word "functions" pb in
     let () = whitespaces pb in
     let tes = many parse_term_decl pb in
-    ([], tes, [], [])
+    ([], tes, [], [], [])
   )
   (* parse values *)
   <|> tryrule (fun pb ->
@@ -1630,7 +1628,7 @@ let parse_module_decl (pb: parserbuffer) : vdmmoduledecl = begin
     let () = word "values" pb in
     let () = whitespaces pb in
     let tes = many parse_value_decl pb in
-    ([], [], tes, [])
+    ([], [], tes, [], [])
   )
   (* parse state *)
   <|> tryrule (fun pb ->
@@ -1702,15 +1700,15 @@ let parse_module_decl (pb: parserbuffer) : vdmmoduledecl = begin
     
     let tes = State (n, fields, inv, init) in
 
-    ([], [], [], [tes])
+    ([], [], [], [tes], [])
   )
   (* parse operation *)
   <|> tryrule (fun pb ->
     let () = whitespaces pb in
     let () = word "operations" pb in
     let () = whitespaces pb in
-    let _ = many parse_operations_decl pb in
-    ([], [], [], [])
+    let ops = many parse_operations_decl pb in
+    ([], [], [], [], ops)
   )
 
   ) "not a valide module declaration"
