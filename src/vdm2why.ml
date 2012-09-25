@@ -6,6 +6,8 @@ open Printer
 
 open Printf
 
+open Calculus_kernel
+
 let main () = 
   let stream = 
     if Array.length Sys.argv < 2 then
