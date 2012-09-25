@@ -1,2 +1,7 @@
 a tentative prototype to translate vdm-sl to why3
-Needs poussin
+Dependencies on poussin
+TODO:
+   redo it!
+   - redo parser in ocamlyacc
+   - add std vdm defs in poussin styles
+   - transform ast -> poussin + type
