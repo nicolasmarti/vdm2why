@@ -47,6 +47,7 @@ type vdmterm_ast = TeBool of bool
 		   | TeQuote of string
 		       
 		   | TeName of string
+		   | TePat of string
 
 		   | TeDotDotDot
 		   | TeJoker

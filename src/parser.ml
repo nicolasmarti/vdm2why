@@ -408,14 +408,14 @@ and parse_type_lvl0 ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmtype
 end pb
 
 (* the term parser *)
-let rec parse_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmterm = begin 
+let rec parse_term ?(pattern: bool = false) ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmterm = begin 
   error (
     tryrule parse_op_term
     <|> parse_term_lvl1
   ) "not a valid term"
 end pb
 
-and parse_term_typed_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmterm = begin 
+and parse_term_typed_term ?(pattern: bool = false) ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmterm = begin 
   error (
     tryrule (fun pb -> 
       let te = parse_term_lvl1 ~leftmost:leftmost pb in
@@ -433,7 +433,7 @@ and parse_term_typed_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : v
   ) "not a valid term"
 end pb
 
-and parse_term_lvl1 ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmterm = begin 
+and parse_term_lvl1 ?(pattern: bool = false) ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmterm = begin 
   error (
   (* field access *)
   tryrule (fun pb ->
@@ -499,7 +499,7 @@ and parse_term_lvl1 ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmterm
   ) "not a valid term (lvl1)"
 end pb
 
-and parse_basic_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmterm = begin 
+and parse_basic_term ?(pattern: bool = false) ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmterm = begin 
   error (
   (* true, false *)
   tryrule (fun pb ->
@@ -986,7 +986,7 @@ and parse_basic_term ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmter
     let endpos = cur_pos pb in
     let () = whitespaces pb in
     match args with
-      | None -> build_term ~pos:pos (TeName q)
+      | None -> if pattern then build_term ~pos:pos (TePat q) else build_term ~pos:pos (TeName q)
       | Some l -> build_term ~pos:(startpos, endpos) (TeApp (q, l))
   )
   (* paren *)
