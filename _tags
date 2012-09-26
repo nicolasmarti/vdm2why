@@ -1,3 +1,3 @@
 <src>: include
 
-<src/vdm2why.{ml,byte,native,p.native}>: pkg_str, pkg_poussin
+<src/vdm2why.{ml,byte,native,p.native,byte,d.byte}>: pkg_str, pkg_poussin

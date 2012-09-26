@@ -1,2 +1,4 @@
 src/vdm2why.native
 src/vdm2why.p.native
+src/vdm2why.byte
+src/vdm2why.d.byte
