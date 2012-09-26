@@ -27,7 +27,8 @@ type parserbuffer = {
   mutable inputstream: string Stream.t; 
   mutable bufferstr: Buffer.t;
   mutable beginpointer: int;    
-  mutable error: ((int * int) * (int * int) * (int * int) * string) list
+  mutable error: ((int * int) * (int * int) * (int * int) * string) list;
+  mutable coo: (int, (int * int)) Hashtbl.t
 };;
 
 let build_parserbuffer stream = {
@@ -35,6 +36,7 @@ let build_parserbuffer stream = {
   bufferstr = Buffer.create 0;
   beginpointer = 0;
   error = [];
+  coo = Hashtbl.create 100
 };;
 
 let current_buffer (pb: parserbuffer) =
@@ -44,22 +46,30 @@ let current_buffer (pb: parserbuffer) =
 (* test if we reach the end of the buffer *)
 let endofbuffer (pb:parserbuffer) = 
   (pb.beginpointer = Buffer.length pb.bufferstr)
-    
+
 let pos_coo (pb: parserbuffer) (pos: int) : (int * int) =
-  let nb_row = ref 0 in
-  let cur_index = ref 0 in
-  let last_index = ref 0 in
-  let s = Buffer.contents pb.bufferstr in
-  try 
-    while !cur_index <= pos do
-      last_index := !cur_index;
-      cur_index := String.index_from s !cur_index '\n';
-      cur_index := !cur_index + 1;
-      if !cur_index <= pos then nb_row := !nb_row + 1 else ();
-    done;
-    (!nb_row, pos - !last_index)
+  try Hashtbl.find pb.coo pos 
   with
-    | Not_found -> (!nb_row, pos - !last_index)
+    | _ ->
+      let nb_row = ref 0 in
+      let cur_index = ref 0 in
+      let last_index = ref 0 in
+      let s = Buffer.contents pb.bufferstr in
+      try 
+	while !cur_index <= pos do
+	  last_index := !cur_index;
+	  cur_index := String.index_from s !cur_index '\n';
+	  cur_index := !cur_index + 1;
+	  if !cur_index <= pos then nb_row := !nb_row + 1 else ();
+	done;
+	let c = (!nb_row, pos - !last_index) in
+	Hashtbl.add pb.coo pos c;
+	c
+      with
+	| Not_found -> 
+	  let c = (!nb_row, pos - !last_index) in
+	  Hashtbl.add pb.coo pos c;
+	  c
 ;;
 
 let cur_pos pb = pos_coo pb pb.beginpointer
