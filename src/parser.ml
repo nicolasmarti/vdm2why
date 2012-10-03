@@ -137,9 +137,12 @@ Hashtbl.add infixes "<>" (200, NoAssoc, fun pos x y -> build_term ~pos:pos (TeIn
 
 Hashtbl.add postfixes "~" (310, fun pos x -> build_term ~pos:pos (TePrefix ("~", x)));;
 
+let type_mem : (int, (vdmtype * int)) Hashtbl.t = Hashtbl.create 100
+
+let memoize_vdmtype = memoize_parser type_mem
 
 (* the type parser *)
-let rec parse_type ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmtype = begin 
+let rec parse_type ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmtype = memoize_vdmtype begin 
   (* function *)
   tryrule (fun pb ->
     let () = whitespaces pb in
@@ -164,7 +167,7 @@ let rec parse_type ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmtype 
   <|> tryrule (parse_type_lvl1 ~leftmost:leftmost)
 end pb
 
-and parse_type_lvl1 ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmtype = begin 
+and parse_type_lvl1 ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmtype = memoize_vdmtype begin 
   error (
   (* product *)
   tryrule (fun pb ->
@@ -203,7 +206,7 @@ and parse_type_lvl1 ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmtype
   ) "not a valid type"
 end pb
 
-and parse_type_lvl0 ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmtype = begin 
+and parse_type_lvl0 ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmtype = memoize_vdmtype begin 
   error (
   (* bool *)
   tryrule (fun pb ->
@@ -407,14 +410,18 @@ and parse_type_lvl0 ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmtype
   ) "not a valid type"
 end pb
 
+let term_mem : (int, (vdmterm * int)) Hashtbl.t = Hashtbl.create 100
+
+let memoize_vdmterm = memoize_parser term_mem
+
 (* the term parser *)
-let rec parse_term ?(pattern: bool = false) ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmterm = begin 
+let rec parse_term ?(pattern: bool = false) ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmterm = memoize_vdmterm begin 
   error (
     tryrule parse_op_term
     <|> parse_term_lvl1
   ) "not a valid term"
 end pb
-
+(*
 and parse_term_typed_term ?(pattern: bool = false) ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmterm = begin 
   error (
     tryrule (fun pb -> 
@@ -432,8 +439,8 @@ and parse_term_typed_term ?(pattern: bool = false) ?(leftmost: int * int = -1, -
     (*<|> parse_term_lvl1*)
   ) "not a valid term"
 end pb
-
-and parse_term_lvl1 ?(pattern: bool = false) ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmterm = begin 
+*)
+and parse_term_lvl1 ?(pattern: bool = false) ?(leftmost: int * int = -1, -1) (pb: parserbuffer) : vdmterm = memoize_vdmterm begin 
   error (
   (* field access *)
   tryrule (fun pb ->
@@ -1007,7 +1014,7 @@ and parse_vdmop: vdmterm opparser = {
   reserved = (fun pb -> raise NoMatch);
 }
 
-and parse_op_term (pb: parserbuffer) : vdmterm = begin
+and parse_op_term (pb: parserbuffer) : vdmterm = memoize_vdmterm begin
   opparse parse_vdmop
 end pb
 

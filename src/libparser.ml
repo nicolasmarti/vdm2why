@@ -1195,3 +1195,22 @@ let best_pos (p1: pos) (p2: pos) : pos =
     | _ when p2 = nopos  -> p1
     | _ when pos_in p1 p2 -> p2
     | _ -> p1
+
+
+let memoize_parser (h: (int, ('a * int)) Hashtbl.t)  (p: 'a parsingrule) : 'a parsingrule =
+  fun pb ->
+    let startp = pb.beginpointer in
+    try
+      let res = Hashtbl.find h startp in
+      pb.beginpointer <- snd res;
+      fst res
+    with
+      | _ -> 
+	try 
+	  let res = p pb in
+	  let endp = pb.beginpointer in
+	  Hashtbl.replace h startp (res, endp);
+	  res
+	with
+	  | NoMatch -> 
+	    raise NoMatch
